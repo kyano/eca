@@ -522,6 +522,30 @@
       (is (nil? (-> (finalize [{:role "user" :content "hi"}] cache true "DYN")
                     last :content first :cache_control))))))
 
+(deftest chat!-omit-model-test
+  (testing "omits model after extra-payload merge when requested"
+    (let [req* (atom nil)]
+      (with-client-proxied {}
+        (fn handler [req]
+          (reset! req* req)
+          {:status 200 :body {:content [{:text "ok"}]}})
+        (llm-providers.anthropic/chat!
+         {:model "claude-sonnet-4-6"
+          :api-url "http://localhost:1"
+          :api-key "fake-key"
+          :auth-type :auth/key
+          :omit-model? true
+          :extra-payload {:model "extra-payload-model"}
+          :user-messages [{:role "user" :content "hello"}]
+          :past-messages []}
+         nil))
+      (let [body (:body @req*)]
+        (is (not (contains? body :model)))
+        (is (match? {:messages [{:role "user" :content vector?}]
+                     :max_tokens 32000
+                     :stream false}
+                    body))))))
+
 (deftest chat!-mid-conversation-system-test
   (let [base-params {:model "claude-opus-4-8"
                      :api-url "http://localhost:1"

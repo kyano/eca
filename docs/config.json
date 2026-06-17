@@ -631,6 +631,11 @@
           "description": "Custom relative URL path for completion requests.",
           "markdownDescription": "Custom relative URL path for completion requests."
         },
+        "omitModel": {
+          "type": "boolean",
+          "description": "Omit model from Anthropic request bodies for endpoints that encode the model in the URL.",
+          "markdownDescription": "Omit `model` from Anthropic request bodies for compatible endpoints that encode the model in the URL."
+        },
         "thinkTagStart": {
           "type": "string",
           "description": "Custom start tag for thinking/reasoning blocks in model responses.",

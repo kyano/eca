@@ -297,6 +297,7 @@
           :auth-type auth-type
           :cancelled? cancelled?
           :cache-retention (:cacheRetention provider-config)
+          :omit-model? (:omitModel provider-config)
           :stream-idle-timeout-seconds (:streamIdleTimeoutSeconds config)}
          callbacks)
 
@@ -407,6 +408,7 @@
             :api-key api-key
             :cancelled? cancelled?
             :cache-retention (:cacheRetention provider-config)
+            :omit-model? (:omitModel provider-config)
             :stream-idle-timeout-seconds (:streamIdleTimeoutSeconds config)}
            callbacks))
 

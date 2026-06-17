@@ -364,6 +364,7 @@ Schema:
 | `url`                             | string  | API URL (with support for dynamic strings like `${env:MY_URL}` or `${cmd:...}`)                              | No*      |
 | `key`                             | string  | API key (with support for dynamic strings like `${env:MY_KEY}`, `${netrc:api.my-provider.com}` or `${cmd:pass show eca/key}`) | No*      |
 | `completionUrlRelativePath`       | string  | Optional override for the completion endpoint path (see defaults below and examples like Azure)              | No       |
+| `omitModel`                       | boolean | Optional omit `model` from Anthropic request bodies when compatible endpoints encode it in the URL           | No       |
 | `thinkTagStart`                   | string  | Optional override the think start tag tag for openai-chat (Default: "<think>") api                           | No       |
 | `thinkTagEnd`                     | string  | Optional override the think end tag for openai-chat (Default: "</think>") api                                | No       |
 | `httpClient`                      | map     | Allow customize the http-client for this provider requests, like changing http version                       | No       |

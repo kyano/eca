@@ -385,7 +385,7 @@
   [{:keys [model user-messages instructions max-output-tokens
            api-url api-key auth-type url-relative-path reason? past-messages
            tools web-search mid-conversation-system? extra-payload extra-headers supports-image? http-client cancelled?
-           stream-idle-timeout-seconds cache-retention]}
+           stream-idle-timeout-seconds cache-retention omit-model?]}
    {:keys [on-message-received on-error on-reason on-prepare-tool-call on-tools-called on-usage-updated on-server-web-search] :as callbacks}]
   (let [messages (-> (concat past-messages (fix-non-thinking-assistant-messages user-messages))
                      group-parallel-tool-calls
@@ -408,17 +408,18 @@
                                {:type "text" :text static :cache_control cache-control}]
                         (and (not (string/blank? dynamic)) (not mid-system?))
                         (conj {:type "text" :text dynamic :cache_control cache-control}))
-        body (merge
-              (assoc-some
-               {:model model
-                :messages (finalize-messages messages cache-control mid-system? dynamic)
-                :max_tokens (or max-output-tokens 32000)
-                :stream stream?
-                :tools (add-cache-to-last-tool (->tools tools web-search) cache-control)
-                :system system-blocks}
-               :thinking (when reason?
-                           {:type "enabled" :budget_tokens 2048}))
-              extra-payload)
+        body (cond-> (merge
+                      (assoc-some
+                       {:model model
+                        :messages (finalize-messages messages cache-control mid-system? dynamic)
+                        :max_tokens (or max-output-tokens 32000)
+                        :stream stream?
+                        :tools (add-cache-to-last-tool (->tools tools web-search) cache-control)
+                        :system system-blocks}
+                       :thinking (when reason?
+                                   {:type "enabled" :budget_tokens 2048}))
+                      extra-payload)
+               omit-model? (dissoc :model))
         context-usage* (atom nil)
         has-content?* (atom false)
         has-stop-reason?* (atom false)

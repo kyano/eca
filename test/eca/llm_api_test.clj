@@ -390,7 +390,7 @@
           "openai handler should NOT receive :image-generation true when capability is off"))))
 
 (deftest prompt-forwards-stream-idle-timeout-and-cache-retention-to-anthropic-handler-test
-  (testing "custom provider with :api anthropic forwards :stream-idle-timeout-seconds and :cache-retention to chat!"
+  (testing "custom provider with :api anthropic forwards :stream-idle-timeout-seconds, :cache-retention, and :omit-model? to chat!"
     (let [captured* (atom nil)]
       (with-redefs [llm-providers.anthropic/chat!
                     (fn [opts _callbacks] (reset! captured* opts) :ok)]
@@ -410,10 +410,13 @@
                                            :url "https://my-proxy.example.com/v1"
                                            :key "test-key"
                                            :cacheRetention "long"
+                                           :omitModel true
                                            :models {"claude-sonnet-4-6" {}}}}}
           :sync? false}))
       (is (= "long" (:cache-retention @captured*))
           "anthropic handler should receive :cache-retention from provider-config")
+      (is (= true (:omit-model? @captured*))
+          "anthropic handler should receive :omit-model? from provider-config")
       (is (= 300 (:stream-idle-timeout-seconds @captured*))
           "anthropic handler should receive :stream-idle-timeout-seconds from top-level config"))))
 
