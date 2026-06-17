@@ -439,7 +439,41 @@
   (let [real-model-name (or (:modelName model-config) model)
         full-real-model (str provider "/" real-model-name)
         full-model (str provider "/" model)
-        base-capabilities (or (get all-models full-real-model)
+        base-capabilities (or (case full-real-model
+                                      "genai:openai/gpt-5.5"                             {:web-search       true
+                                                                                          :image-generation true
+                                                                                          :tools            true
+                                                                                          :reason?          true}
+                                      "genai:openai/gpt-5.5-pro"                         {:web-search       true
+                                                                                          :image-generation true
+                                                                                          :tools            true
+                                                                                          :reason?          true}
+                                      "genai:openai/gpt-5.3-codex"                       {:web-search       false
+                                                                                          :image-generation false
+                                                                                          :tools            true
+                                                                                          :reason?          true}
+                                      "genai:claude-sonnet/4-6"                          {:web-search       true
+                                                                                          :image-generation false
+                                                                                          :tools            true
+                                                                                          :reason?          true}
+                                      "genai:claude-opus/4-6"                            {:web-search       true
+                                                                                          :image-generation false
+                                                                                          :tools            true
+                                                                                          :reason?          true}
+                                      "llama.cpp/Qwen/Qwen3.6-35B-A3B:Q4_K"              {:web-search       false
+                                                                                          :image-generation false
+                                                                                          :tools            true
+                                                                                          :reason?          true}
+                                      "iu:llama.cpp/Google/Gemma-4-31B-it:Q8_0"          {:web-search       false
+                                                                                          :image-generation false
+                                                                                          :tools            true
+                                                                                          :reason?          true}
+                                      "iu:llama.cpp/CohereLabs/North-Mini-Code-1.0:Q8_0" {:web-search       false
+                                                                                          :image-generation false
+                                                                                          :tools            true
+                                                                                          :reason?          true}
+                                      nil)
+                              (get all-models full-real-model)
                               ;; when real-model-name already includes a provider prefix
                               ;; (e.g. "anthropic/claude-opus-4-6"), try direct lookup
                               (get all-models real-model-name)
