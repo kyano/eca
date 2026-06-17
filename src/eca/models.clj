@@ -452,11 +452,11 @@
                                                                                           :image-generation false
                                                                                           :tools            true
                                                                                           :reason?          true}
-                                      "genai:claude-sonnet/4-6"                          {:web-search       true
+                                      "genai:claude/claude-sonnet-4-6"                   {:web-search       false
                                                                                           :image-generation false
                                                                                           :tools            true
                                                                                           :reason?          true}
-                                      "genai:claude-opus/4-6"                            {:web-search       true
+                                      "genai:claude/claude-opus-4-6"                     {:web-search       false
                                                                                           :image-generation false
                                                                                           :tools            true
                                                                                           :reason?          true}
