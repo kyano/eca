@@ -628,8 +628,8 @@
         },
         "completionUrlRelativePath": {
           "type": "string",
-          "description": "Custom relative URL path for completion requests.",
-          "markdownDescription": "Custom relative URL path for completion requests."
+          "description": "Custom relative URL path for completion requests. For Anthropic-compatible providers only, {model} expands to the URL-encoded model name at request time.",
+          "markdownDescription": "Custom relative URL path for completion requests. For Anthropic-compatible providers only, `{model}` expands to the URL-encoded model name at request time."
         },
         "omitModel": {
           "type": "boolean",

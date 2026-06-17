@@ -363,7 +363,7 @@ Schema:
 | `api`                             | string  | The API schema to use (`"openai-responses"`, `"openai-chat"`, or `"anthropic"`)                              | Yes      |
 | `url`                             | string  | API URL (with support for dynamic strings like `${env:MY_URL}` or `${cmd:...}`)                              | No*      |
 | `key`                             | string  | API key (with support for dynamic strings like `${env:MY_KEY}`, `${netrc:api.my-provider.com}` or `${cmd:pass show eca/key}`) | No*      |
-| `completionUrlRelativePath`       | string  | Optional override for the completion endpoint path (see defaults below and examples like Azure)              | No       |
+| `completionUrlRelativePath`       | string  | Optional override for the completion endpoint path (see defaults below and examples like Azure). For Anthropic-compatible providers only, `{model}` expands to the URL-encoded model name. | No       |
 | `omitModel`                       | boolean | Optional omit `model` from Anthropic request bodies when compatible endpoints encode it in the URL           | No       |
 | `thinkTagStart`                   | string  | Optional override the think start tag tag for openai-chat (Default: "<think>") api                           | No       |
 | `thinkTagEnd`                     | string  | Optional override the think end tag for openai-chat (Default: "</think>") api                                | No       |
@@ -538,7 +538,7 @@ Defaults by API type:
 - `openai-chat`: `/v1/chat/completions`
 - `anthropic`: `/v1/messages`
 
-Only set this when your provider uses a different path or expects query parameters at the endpoint (e.g., Azure API versioning).
+Only set this when your provider uses a different path or expects query parameters at the endpoint (e.g., Azure API versioning). For Anthropic-compatible providers (`api`: `"anthropic"`), `{model}` expands at request time to the URL-encoded model name.
 
 ### Credential File Authentication
 

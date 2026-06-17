@@ -36,6 +36,34 @@
           (is (= {:output-text "Hello from Anthropics proxy!"}
                  (select-keys response [:output-text]))))))))
 
+(deftest base-request-model-placeholder-test
+  (testing "expands and URL-encodes the model placeholder in the request path"
+    (let [req* (atom nil)
+          model "claude/sonnet 4"
+          body {:model model
+                :input "hi"
+                :stream false}]
+      (with-client-proxied {}
+
+        (fn handler [req]
+          (reset! req* req)
+          {:status 200
+           :body {:content [{:text "ok"}]}})
+
+        (#'llm-providers.anthropic/base-request!
+         {:rid "r1"
+          :api-key "fake-key"
+          :api-url "http://localhost:1"
+          :model model
+          :body body
+          :url-relative-path "/v1/models/{model}/messages"
+          :auth-type :auth/key})
+
+        (is (= {:method "POST"
+                :uri "/v1/models/claude%2Fsonnet%204/messages"
+                :body body}
+               (select-keys @req* [:method :uri :body])))))))
+
 (deftest oauth-authorize-test
   (testing "exchanges an OAuth code for tokens and returns refresh/access tokens with expiry"
     (let [req* (atom nil)
@@ -540,6 +568,33 @@
           :past-messages []}
          nil))
       (let [body (:body @req*)]
+        (is (not (contains? body :model)))
+        (is (match? {:messages [{:role "user" :content vector?}]
+                     :max_tokens 32000
+                     :stream false}
+                    body))))))
+
+(deftest chat!-model-placeholder-and-omit-model-test
+  (testing "expands the model placeholder in the request path while omitting model from the body"
+    (let [req* (atom nil)
+          model "claude/sonnet 4"]
+      (with-client-proxied {}
+        (fn handler [req]
+          (reset! req* req)
+          {:status 200 :body {:content [{:text "ok"}]}})
+        (llm-providers.anthropic/chat!
+         {:model model
+          :api-url "http://localhost:1"
+          :api-key "fake-key"
+          :auth-type :auth/key
+          :url-relative-path "/v1/models/{model}/messages"
+          :omit-model? true
+          :extra-payload {:model "extra-payload-model"}
+          :user-messages [{:role "user" :content "hello"}]
+          :past-messages []}
+         nil))
+      (let [body (:body @req*)]
+        (is (= "/v1/models/claude%2Fsonnet%204/messages" (:uri @req*)))
         (is (not (contains? body :model)))
         (is (match? {:messages [{:role "user" :content vector?}]
                      :max_tokens 32000

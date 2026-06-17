@@ -21,6 +21,9 @@
 
 (def ^:private messages-path "/v1/messages")
 
+(defn ^:private expand-model-placeholder [url-relative-path model]
+  (string/replace url-relative-path #"\{model\}" (fn [_] (ring.util/url-encode model))))
+
 (defn ^:private any-assistant-message-without-thinking-previously?
   "If there is a assistant message, which has no previous any role message with thinking content, returns true."
   [messages]
@@ -89,8 +92,9 @@
      (fn [tool] (assoc tool :cache_control cache-control)))
     tools))
 
-(defn ^:private base-request! [{:keys [rid body api-url api-key auth-type url-relative-path content-block* on-error on-stream http-client extra-headers cancelled? stream-idle-timeout-seconds]}]
-  (let [url (join-api-url api-url (or url-relative-path messages-path))
+(defn ^:private base-request! [{:keys [rid body api-url api-key auth-type model url-relative-path content-block* on-error on-stream http-client extra-headers cancelled? stream-idle-timeout-seconds]}]
+  (let [url-relative-path (expand-model-placeholder (or url-relative-path messages-path) model)
+        url (join-api-url api-url url-relative-path)
         reason-id* (atom (str (random-uuid)))
         oauth? (= :auth/oauth auth-type)
         headers (client/merge-llm-headers
@@ -541,6 +545,7 @@
                                                                   :tools (->tools tools web-search))
                                                      :api-url api-url
                                                      :api-key (or fresh-api-key api-key)
+                                                     :model model
                                                      :http-client http-client
                                                      :extra-headers extra-headers
                                                      :auth-type auth-type
@@ -582,6 +587,7 @@
       :body body
       :api-url api-url
       :api-key api-key
+      :model model
       :http-client http-client
       :extra-headers extra-headers
       :auth-type auth-type
