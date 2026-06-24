@@ -440,46 +440,56 @@
         full-real-model (str provider "/" real-model-name)
         full-model (str provider "/" model)
         base-capabilities (or (case full-real-model
-                                "vertexai:google/gemini-3.5-flash"                 {:web-search       false
-                                                                                    :image-generation false
-                                                                                    :tools            true
-                                                                                    :reason?          true}
-                                "vertexai:google/gemini-3.1-pro-preview"           {:web-search       false
-                                                                                    :image-generation false
-                                                                                    :tools            true
-                                                                                    :reason?          true}
-                                "genai:openai/gpt-5.5"                             {:web-search       true
-                                                                                    :image-generation true
-                                                                                    :tools            true
-                                                                                    :reason?          true}
-                                "genai:openai/gpt-5.5-pro"                         {:web-search       true
-                                                                                    :image-generation true
-                                                                                    :tools            true
-                                                                                    :reason?          true}
-                                "genai:openai/gpt-5.3-codex"                       {:web-search       false
-                                                                                    :image-generation false
-                                                                                    :tools            true
-                                                                                    :reason?          true}
-                                "genai:claude/claude-sonnet-4-6"                   {:web-search       false
-                                                                                    :image-generation false
-                                                                                    :tools            true
-                                                                                    :reason?          true}
-                                "genai:claude/claude-opus-4-6"                     {:web-search       false
-                                                                                    :image-generation false
-                                                                                    :tools            true
-                                                                                    :reason?          true}
-                                "llama.cpp/Qwen/Qwen3.6-35B-A3B:Q4_K"              {:web-search       false
-                                                                                    :image-generation false
-                                                                                    :tools            true
-                                                                                    :reason?          true}
-                                "iu:llama.cpp/Google/Gemma-4-31B-it:Q8_0"          {:web-search       false
-                                                                                    :image-generation false
-                                                                                    :tools            true
-                                                                                    :reason?          true}
-                                "iu:llama.cpp/CohereLabs/North-Mini-Code-1.0:Q8_0" {:web-search       false
-                                                                                    :image-generation false
-                                                                                    :tools            true
-                                                                                    :reason?          true}
+                                "vertexai:google/gemini-3.5-flash"
+                                {:web-search       false
+                                 :image-generation false
+                                 :tools            true
+                                 :reason?          true}
+                                "vertexai:google/gemini-3.1-pro-preview"
+                                {:web-search       false
+                                 :image-generation false
+                                 :tools            true
+                                 :reason?          true}
+                                "genai:openai/gpt-5.5"
+                                {:web-search       true
+                                 :image-generation true
+                                 :tools            true
+                                 :reason?          true}
+                                "genai:openai/gpt-5.5-pro"
+                                {:web-search       true
+                                 :image-generation true
+                                 :tools            true
+                                 :reason?          true}
+                                "genai:openai/gpt-5.3-codex"
+                                {:web-search       false
+                                 :image-generation false
+                                 :tools            true
+                                 :reason?          true}
+                                "genai:claude/claude-sonnet-4-6"
+                                {:web-search       false
+                                 :image-generation false
+                                 :tools            true
+                                 :reason?          true}
+                                "genai:claude/claude-opus-4-6"
+                                {:web-search       false
+                                 :image-generation false
+                                 :tools            true
+                                 :reason?          true}
+                                "llama.cpp/Qwen/Qwen3.6-35B-A3B:Q4_K"
+                                {:web-search       false
+                                 :image-generation false
+                                 :tools            true
+                                 :reason?          true}
+                                "iu:llama.cpp/Google/Gemma-4-31B-it:Q8_0"
+                                {:web-search       false
+                                 :image-generation false
+                                 :tools            true
+                                 :reason?          true}
+                                "iu:llama.cpp/DO-NOT-USE/Test-Tensor-Parallel-MTP-27B:Q8_0"
+                                {:web-search       false
+                                 :image-generation false
+                                 :tools            true
+                                 :reason?          true}
                                 nil)
                               (get all-models full-real-model)
                               ;; when real-model-name already includes a provider prefix
