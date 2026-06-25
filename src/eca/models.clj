@@ -470,7 +470,7 @@
                                  :image-generation false
                                  :tools            true
                                  :reason?          true}
-                                "genai:claude/claude-opus-4-6"
+                                "genai:claude/claude-opus-4-7"
                                 {:web-search       false
                                  :image-generation false
                                  :tools            true
