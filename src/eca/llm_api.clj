@@ -10,6 +10,7 @@
    [eca.llm-providers.copilot]
    [eca.llm-providers.deepseek]
    [eca.llm-providers.errors :as llm-providers.errors]
+   [eca.llm-providers.gemini :as llm-providers.gemini]
    [eca.llm-providers.google]
    [eca.llm-providers.litellm]
    [eca.llm-providers.lmstudio]
@@ -193,6 +194,8 @@
              :handler llm-providers.ollama/chat!}
     :bedrock {:api     :bedrock
               :handler llm-providers.bedrock/chat!}
+    :gemini {:api     :gemini
+             :handler llm-providers.gemini/chat!}
     nil))
 
 (defn provider->api-handler
@@ -209,11 +212,13 @@
                                                               :openai-chat))
            (= "google" base-provider) (api->handler :openai-chat)
            (= "ollama" base-provider) (api->handler :ollama)
+           (= "gemini" base-provider) (api->handler :gemini)
            :else (case (get-in config [:providers provider :api])
                    ("openai-responses" "openai") (api->handler :openai-responses)
                    "anthropic" (api->handler :anthropic)
                    "openai-chat" (api->handler :openai-chat)
                    "bedrock" (api->handler :bedrock)
+                   "gemini" (api->handler :gemini)
                    nil))))))
 
 (def ^:private reasoning-keys-by-api
