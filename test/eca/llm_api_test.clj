@@ -7,6 +7,7 @@
    [eca.config :as config]
    [eca.llm-api :as llm-api]
    [eca.llm-providers.anthropic :as llm-providers.anthropic]
+   [eca.llm-providers.gemini :as llm-providers.gemini]
    [eca.llm-providers.ollama :as llm-providers.ollama]
    [eca.llm-providers.openai :as llm-providers.openai]
    [eca.llm-providers.openai-chat :as llm-providers.openai-chat]
@@ -706,6 +707,37 @@
           "anthropic handler should receive :cache-retention from provider-config")
       (is (= 300 (:stream-idle-timeout-seconds @captured*))
           "anthropic handler should receive :stream-idle-timeout-seconds from top-level config"))))
+
+(deftest prompt-routes-to-gemini-handler-test
+  (testing "custom provider with :api gemini routes to llm-providers.gemini/chat!"
+    (let [captured* (atom nil)]
+      (with-redefs [llm-providers.gemini/chat!
+                    (fn [opts _callbacks] (reset! captured* opts) :ok)]
+        (#'eca.llm-api/prompt!
+         {:provider "my-gemini"
+          :model "gemini-3-pro"
+          :model-capabilities {:tools true
+                               :reason? true
+                               :model-name "gemini-3-pro"}
+          :user-messages [{:role "user" :content [{:type :text :text "hi"}]}]
+          :past-messages []
+          :tools []
+          :provider-auth {:api-key "test-key"}
+          :config {:streamIdleTimeoutSeconds 180
+                   :providers {"my-gemini" {:api "gemini"
+                                            :url "https://my-gemini.example.com"
+                                            :key "test-key"
+                                            :completionUrlRelativePath "/v1beta/custom/{model}:streamGenerateContent"
+                                            :extraHeaders {"X-Custom" "header-val"}
+                                            :models {"gemini-3-pro" {:extraPayload {:generationConfig {:temperature 0.7}}}}}}}
+          :sync? false}))
+      (is (some? @captured*))
+      (is (= "gemini-3-pro" (:model @captured*)))
+      (is (= "https://my-gemini.example.com" (:api-url @captured*)))
+      (is (= "/v1beta/custom/{model}:streamGenerateContent" (:url-relative-path @captured*)))
+      (is (= {"X-Custom" "header-val"} (:extra-headers @captured*)))
+      (is (= {:generationConfig {:temperature 0.7}} (:extra-payload @captured*)))
+      (is (= 180 (:stream-idle-timeout-seconds @captured*))))))
 
 (deftest prompt-merges-provider-and-model-extra-headers-test
   (testing "provider-level extraHeaders are sent and model-level ones win on conflicts"

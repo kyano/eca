@@ -1,11 +1,13 @@
 (ns eca.llm-util-test
   (:require
    [clojure.java.io :as io]
+   [clojure.string :as string]
    [clojure.test :refer [deftest is testing]]
+   [matcher-combinators.test :refer [match?]]
    [eca.config :as config]
    [eca.llm-util :as llm-util]
-   [eca.secrets :as secrets]
-   [matcher-combinators.test :refer [match?]])
+   [eca.logger :as logger]
+   [eca.secrets :as secrets])
   (:import
    [java.io ByteArrayInputStream EOFException IOException]
    [java.net ConnectException SocketException SocketTimeoutException UnknownHostException]
@@ -270,4 +272,29 @@
   (testing "is non-nil for any exception"
     (is (string? (llm-util/connection-error-message (Exception. "x"))))
     (is (string? (llm-util/connection-error-message (Exception.))))))
+
+(deftest expand-model-placeholder-test
+  (testing "expands {model} placeholder with url-encoded model"
+    (is (= "/v1/models/gemini%2Fpro%203:generateContent"
+           (llm-util/expand-model-placeholder "/v1/models/{model}:generateContent" "gemini/pro 3")))
+    (is (= "/v1/messages"
+           (llm-util/expand-model-placeholder "/v1/messages" "claude-sonnet")))))
+
+(deftest log-request-redacts-sensitive-headers-test
+  (testing "obfuscates Authorization, x-api-key, and x-goog-api-key while keeping other headers untouched"
+    (let [logged-msg (atom nil)]
+      (with-redefs [logger/debug (fn [_ msg] (reset! logged-msg msg))]
+        (llm-util/log-request :test "123" "https://example.com" "{}"
+                              {"Authorization" "Bearer secret-token-value-12345"
+                               "x-api-key" "secret-anthropic-key-67890"
+                               "x-goog-api-key" "secret-google-api-key-abcde"
+                               "Content-Type" "application/json"})
+        (is (some? @logged-msg))
+        (is (not (string/includes? @logged-msg "secret-token-value-12345")))
+        (is (not (string/includes? @logged-msg "secret-anthropic-key-67890")))
+        (is (not (string/includes? @logged-msg "secret-google-api-key-abcde")))
+        (is (re-find #"\"Authorization\" \"Bearer s\*{5,10}ue-12345\"" @logged-msg))
+        (is (re-find #"\"x-api-key\" \"sec\*{5,10}890\"" @logged-msg))
+        (is (re-find #"\"x-goog-api-key\" \"sec\*{5,10}cde\"" @logged-msg))
+        (is (string/includes? @logged-msg "\"Content-Type\" \"application/json\""))))))
 

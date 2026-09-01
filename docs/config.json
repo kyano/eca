@@ -622,7 +622,8 @@
             "openai-responses",
             "openai-chat",
             "anthropic",
-            "bedrock"
+            "bedrock",
+            "gemini"
           ]
         },
         "fetchModels": {
@@ -676,8 +677,8 @@
         },
         "completionUrlRelativePath": {
           "type": "string",
-          "description": "Custom relative URL path for completion requests.",
-          "markdownDescription": "Custom relative URL path for completion requests."
+          "description": "Custom relative URL path for completion requests. For Gemini-compatible providers, {model} expands to the URL-encoded model name at request time.",
+          "markdownDescription": "Custom relative URL path for completion requests. For Gemini-compatible providers, `{model}` expands to the URL-encoded model name at request time."
         },
         "thinkTagStart": {
           "type": "string",

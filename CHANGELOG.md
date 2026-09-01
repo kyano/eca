@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Add native Google Gemini API provider (`api: "gemini"`) with streaming and non-streaming support, tools, Google search grounding, image input, and thinking support.
+
 ## 0.158.0
 
 - Build fallback variants from `/v1/models` advertised reasoning efforts (OpenRouter, Synthetic) when no built-in or user variants exist.
@@ -69,7 +71,6 @@
 - Store chats in per-chat cache files with a lazy-loaded index instead of one whole-workspace blob, fixing CPU spikes and slow startup as history grows; legacy caches migrate automatically. #557
 - Hooks `db_cache_path` now points at the workspace cache dir instead of `db.transit.json`; `read-chat --db-cache-path` accepts the dir or a legacy file. #557
 - Keep `compact_chat` in the tool schema across normal and compact requests, preserving prompt-cache prefixes while rejecting calls outside active compaction.
-
 - Provide token metrics for ollama provider. #567.
 
 ## 0.152.0

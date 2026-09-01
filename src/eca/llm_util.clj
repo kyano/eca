@@ -1,8 +1,9 @@
 (ns eca.llm-util
   (:require
+   [clojure.string :as string]
    [camel-snake-kebab.core :as csk]
    [cheshire.core :as json]
-   [clojure.string :as string]
+   [ring.util.codec :as ring.util]
    [eca.config :as config]
    [eca.logger :as logger]
    [eca.secrets :as secrets]
@@ -81,10 +82,18 @@
    ""
    (-> result :output :contents)))
 
+(defn expand-model-placeholder
+  "Replaces a `{model}` placeholder in `url-relative-path` with the
+   URL-encoded `model` name. Used by providers (e.g. Gemini) that
+   support encoding the model into a custom completion endpoint path."
+  [url-relative-path model]
+  (string/replace url-relative-path #"\{model\}" (fn [_] (ring.util/url-encode model))))
+
 (defn log-request [tag rid url body headers]
   (let [obfuscated-headers (-> headers
                                (shared/update-some "Authorization" #(shared/obfuscate % {:preserve-num 8}))
-                               (shared/update-some "x-api-key" shared/obfuscate))]
+                               (shared/update-some "x-api-key" shared/obfuscate)
+                               (shared/update-some "x-goog-api-key" shared/obfuscate))]
     (logger/debug tag (format "[%s] Sending body: '%s', headers: '%s', url: '%s'" rid body obfuscated-headers url))))
 
 (defn log-response [tag rid event data]

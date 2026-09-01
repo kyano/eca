@@ -411,10 +411,10 @@ Schema:
 
 | Option                            | Type    | Description                                                                                                  | Required |
 |-----------------------------------|---------|--------------------------------------------------------------------------------------------------------------|----------|
-| `api`                             | string  | The API schema to use (`"openai-responses"`, `"openai-chat"`, or `"anthropic"`)                              | Yes      |
+| `api`                             | string  | The API schema to use (`"openai-responses"`, `"openai-chat"`, `"anthropic"`, `"bedrock"`, or `"gemini"`)      | Yes      |
 | `url`                             | string  | API URL (with support for dynamic strings like `${env:MY_URL}` or `${cmd:...}`)                              | No*      |
 | `key`                             | string  | API key (with support for dynamic strings like `${env:MY_KEY}`, `${netrc:api.my-provider.com}` or `${cmd:pass show eca/key}`) | No*      |
-| `completionUrlRelativePath`       | string  | Optional override for the completion endpoint path (see defaults below and examples like Azure)              | No       |
+| `completionUrlRelativePath`       | string  | Optional override for the completion endpoint path (see defaults below and examples like Azure). For Gemini-compatible providers, `{model}` expands to the URL-encoded model name. | No       |
 | `thinkTagStart`                   | string  | Optional override the think start tag tag for openai-chat (Default: "<think>") api                           | No       |
 | `thinkTagEnd`                     | string  | Optional override the think end tag for openai-chat (Default: "</think>") api                                | No       |
 | `httpClient`                      | map     | Allow customize the http-client for this provider requests, like changing http version                       | No       |
@@ -454,6 +454,27 @@ Examples:
       }
     }
     ```
+
+=== "Custom Gemini-compatible provider"
+
+    Pointing `api: "gemini"` at a company gateway that fronts the native Gemini API:
+
+    ```javascript title="~/.config/eca/config.json"
+    {
+      "providers": {
+        "my-company-gemini": {
+          "api": "gemini",
+          "url": "https://llm-gateway.my-company.com",
+          "requiresAuth": false,
+          "models": {
+            "gemini-2.5-pro": {}
+          }
+        }
+      }
+    }
+    ```
+
+    Supports both streaming (`/v1beta/models/{model}:streamGenerateContent?alt=sse`) and non-streaming (`/v1beta/models/{model}:generateContent`) endpoints.
 
 === "Custom model settings / payload / header"
 
@@ -574,6 +595,7 @@ When configuring custom providers, choose the appropriate API type:
 
 - **`anthropic`**: Anthropic's native API for Claude models.
 - **`openai-responses`**: OpenAI's new responses API endpoint (`/v1/responses`). Best for OpenAI models with enhanced features like reasoning and web search.
+- **`gemini`**: Google's native Gemini API. Model is embedded in the URL path. Supports native thinking/reasoning and parallel function calling without openai-chat-compat limitations. Supports streaming (`streamGenerateContent?alt=sse`) and non-streaming (`generateContent`) methods.
 - **`openai-chat`**: Standard OpenAI Chat Completions API (`/v1/chat/completions`). Use this for most third-party providers:
     - OpenRouter
     - DeepSeek
@@ -592,8 +614,9 @@ Defaults by API type:
 - `openai-responses`: `/v1/responses`
 - `openai-chat`: `/v1/chat/completions`
 - `anthropic`: `/v1/messages`
+- `gemini`: `/v1beta/models/{model}:streamGenerateContent?alt=sse` (or `/v1beta/models/{model}:generateContent` for non-streaming)
 
-Only set this when your provider uses a different path or expects query parameters at the endpoint (e.g., Azure API versioning).
+Only set this when your provider uses a different path or expects query parameters at the endpoint (e.g., Azure API versioning). For Gemini-compatible (`api`: `"gemini"`) providers, `{model}` expands at request time to the URL-encoded model name.
 
 ### Credential File Authentication
 
