@@ -4,6 +4,7 @@
 
 - Expand `@file` references in custom-command and parameterized-skill arguments into file content before sending the prompt. #163
 - Fix steered native commands (e.g. `/sync-system-prompt`) being sent to the LLM as text while the chat runs: run them at the next turn boundary or refuse chat-changing ones. #610
+- Add native Google Gemini API provider (`api: "gemini"`) with streaming and non-streaming support, tools, Google search grounding, image input, and thinking support.
 
 ## 0.160.3
 
@@ -117,7 +118,6 @@
 - Store chats in per-chat cache files with a lazy-loaded index instead of one whole-workspace blob, fixing CPU spikes and slow startup as history grows; legacy caches migrate automatically. #557
 - Hooks `db_cache_path` now points at the workspace cache dir instead of `db.transit.json`; `read-chat --db-cache-path` accepts the dir or a legacy file. #557
 - Keep `compact_chat` in the tool schema across normal and compact requests, preserving prompt-cache prefixes while rejecting calls outside active compaction.
-
 - Provide token metrics for ollama provider. #567.
 
 ## 0.152.0

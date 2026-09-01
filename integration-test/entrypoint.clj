@@ -15,6 +15,7 @@
     integration.chat.anthropic-test
     integration.chat.github-copilot-test
     integration.chat.google-test
+    integration.chat.gemini-test
     integration.chat.ollama-test
     integration.chat.custom-provider-test
     integration.chat.hooks-test
