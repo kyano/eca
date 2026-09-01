@@ -174,6 +174,43 @@
     (testing "returns nil when mandatory costs are missing"
       (is (nil? (shared/tokens->cost 30 nil nil 20 {:input-token-cost 0.01}))))))
 
+(deftest usage-msg->usage-test
+  (let [chat-id "chat-1"
+        full-model "model-1"
+        db* (atom {})
+        chat-ctx {:chat-id chat-id :db* db*}]
+    (testing "first usage message with cache tokens sets session-tokens"
+      (let [usage (shared/usage-msg->usage
+                   {:input-tokens 100
+                    :output-tokens 20
+                    :input-cache-read-tokens 500}
+                   full-model
+                   chat-ctx)]
+        (is (= 620 (:session-tokens usage)))
+        (is (= 500 (get-in @db* [:chats chat-id :usage :last-input-cache-read-tokens])))
+        (is (= 0 (get-in @db* [:chats chat-id :usage :last-input-cache-creation-tokens])))))
+    (testing "subsequent message without cache tokens resets last-input-cache-read-tokens and recalculates session-tokens"
+      (let [usage (shared/usage-msg->usage
+                   {:input-tokens 200
+                    :output-tokens 30}
+                   full-model
+                   chat-ctx)]
+        (is (= 0 (get-in @db* [:chats chat-id :usage :last-input-cache-read-tokens])))
+        (is (= 0 (get-in @db* [:chats chat-id :usage :last-input-cache-creation-tokens])))
+        (is (= 230 (:session-tokens usage)))
+        (is (= 300 (get-in @db* [:chats chat-id :usage :total-input-tokens])))
+        (is (= 50 (get-in @db* [:chats chat-id :usage :total-output-tokens])))
+        (is (= 500 (get-in @db* [:chats chat-id :usage :total-input-cache-read-tokens])))))
+    (testing "zero-token update returns nil and does not change db*"
+      (let [db-before @db*
+            usage (shared/usage-msg->usage
+                   {:input-tokens 0
+                    :output-tokens 0}
+                   full-model
+                   chat-ctx)]
+        (is (nil? usage))
+        (is (= db-before @db*))))))
+
 (deftest deep-merge-test
   (testing "second map as nil returns first map"
     (is (match?

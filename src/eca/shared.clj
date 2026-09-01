@@ -371,16 +371,16 @@
            input-cache-creation-tokens input-cache-read-tokens]}
    full-model
    {:keys [chat-id db*] :as chat-ctx}]
-  (when (and output-tokens input-tokens)
+  (when (and input-tokens output-tokens (pos? (+ input-tokens output-tokens (or input-cache-read-tokens 0) (or input-cache-creation-tokens 0))))
     (swap! db* assoc-in [:chats chat-id :usage :last-input-tokens] input-tokens)
     (swap! db* assoc-in [:chats chat-id :usage :last-output-tokens] output-tokens)
     (swap! db* update-in [:chats chat-id :usage :total-input-tokens] (fnil + 0) input-tokens)
     (swap! db* update-in [:chats chat-id :usage :total-output-tokens] (fnil + 0) output-tokens)
-    (when input-cache-creation-tokens
-      (swap! db* assoc-in [:chats chat-id :usage :last-input-cache-creation-tokens] input-cache-creation-tokens)
+    (swap! db* assoc-in [:chats chat-id :usage :last-input-cache-creation-tokens] (or input-cache-creation-tokens 0))
+    (swap! db* assoc-in [:chats chat-id :usage :last-input-cache-read-tokens] (or input-cache-read-tokens 0))
+    (when (and input-cache-creation-tokens (pos? input-cache-creation-tokens))
       (swap! db* update-in [:chats chat-id :usage :total-input-cache-creation-tokens] (fnil + 0) input-cache-creation-tokens))
-    (when input-cache-read-tokens
-      (swap! db* assoc-in [:chats chat-id :usage :last-input-cache-read-tokens] input-cache-read-tokens)
+    (when (and input-cache-read-tokens (pos? input-cache-read-tokens))
       (swap! db* update-in [:chats chat-id :usage :total-input-cache-read-tokens] (fnil + 0) input-cache-read-tokens))
     (usage-sumary chat-id full-model @db* (select-keys chat-ctx [:subscription?]))))
 

@@ -1,7 +1,9 @@
 (ns llm-mock.server
   (:require
+   [clojure.string :as string]
    [integration.eca :as eca]
    [llm-mock.anthropic :as llm-mock.anthropic]
+   [llm-mock.gemini :as llm-mock.gemini]
    [llm-mock.ollama :as llm-mock.ollama]
    [llm-mock.openai :as llm-mock.openai]
    [llm-mock.openai-chat :as llm-mock.openai-chat]
@@ -42,6 +44,10 @@
         (and (= :post request-method)
              (= uri "/anthropic/v1/messages"))
         (llm-mock.anthropic/handle-anthropic-messages req)
+
+        (and (= :post request-method)
+             (string/starts-with? uri "/gemini/v1beta/models/"))
+        (llm-mock.gemini/handle-gemini-generate-content req)
 
         (and (= :get request-method)
              (= uri "/ollama/api/tags"))
