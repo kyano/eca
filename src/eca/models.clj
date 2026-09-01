@@ -640,13 +640,41 @@
               base
               overrides))
 
+(def ^:private default-capabilities
+  {:tools true
+   :reason? true
+   :web-search false
+   :mid-conversation-system? false
+   :image-generation? false
+   :image-input? true})
+
 (defn ^:private build-model-capabilities
   "Build capabilities for a single model, looking up from known models database."
   [all-models provider model model-config]
   (let [real-model-name (or (:modelName model-config) model)
         full-real-model (str provider "/" real-model-name)
         full-model (str provider "/" model)
-        base-capabilities (or (get all-models full-real-model)
+        base-capabilities (or (case full-real-model
+                                ;; Google Gemini
+                                "vertexai:google/gemini-3.8-flash" {:web-search true}
+                                "vertexai:google/gemini-3.1-pro-preview" {:web-search true}
+                                "genai:gemini/gemini-3.7-flash" {:web-search true}
+                                ;; OpenAI GPT
+                                "genai:openai/gpt-5.6-sol" {:web-search true
+                                                            :image-generation? true}
+                                "genai:openai/gpt-5.6-terra" {:web-search true
+                                                              :image-generation? true}
+                                "genai:openai/gpt-5.6-luna" {:web-search true
+                                                             :image-generation? true}
+                                "genai:openai/gpt-5.5" {:web-search true
+                                                        :image-generation? true}
+                                ;; Local
+                                "llama.cpp/google/gemma-4-26B-A4B-it-QAT" {}
+                                "iu:llama.cpp/google/gemma-4-31B-it" {}
+                                "iu:llama.cpp/Meta/Muse-Glimmer-30B" {}
+                                "iu:llama.cpp-dev/poolside/Laguna-S-2.1" {:image-input? false}
+                                nil)
+                              (get all-models full-real-model)
                               ;; when real-model-name already includes a provider prefix
                               ;; (e.g. "anthropic/claude-opus-4-6"), try direct lookup
                               (get all-models real-model-name)
@@ -661,15 +689,9 @@
                                                            (= (shared/normalize-model-name real-model-name)
                                                               (shared/normalize-model-name (second (shared/full-model->provider+model %))))))
                                               first)]
-                                (get all-models found-full-model))
-                              {:tools true
-                               :reason? true
-                               :web-search false
-                               :mid-conversation-system? false
-                               :image-generation? false
-                               :image-input? false})
-        model-capabilities (-> (merge-capabilities base-capabilities
-                                                   (config-overrides->capabilities model-config))
+                                (get all-models found-full-model)))
+        model-capabilities (-> (merge-capabilities default-capabilities base-capabilities)
+                               (merge-capabilities (config-overrides->capabilities model-config))
                                (assoc :model-name real-model-name))]
     [full-model model-capabilities]))
 
