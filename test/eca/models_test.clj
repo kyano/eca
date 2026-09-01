@@ -798,7 +798,28 @@
            (#'models/build-model-capabilities all-models "openai" "gpt-4.1" {})))
       (is (match?
            ["anthropic/claude-sonnet-4-6" {:image-generation? false}]
-           (#'models/build-model-capabilities all-models "anthropic" "claude-sonnet-4-6" {}))))))
+           (#'models/build-model-capabilities all-models "anthropic" "claude-sonnet-4-6" {})))))
+
+  (testing "Custom model definitions resolve expected capabilities"
+    (is (match?
+         ["genai:openai/gpt-6-astra" {:web-search true
+                                      :image-generation? true
+                                      :image-input? true}]
+         (#'models/build-model-capabilities {} "genai:openai" "gpt-6-astra" {})))
+    (is (match?
+         ["genai:gemini/gemini-4-argon" {:web-search true
+                                         :image-input? true}]
+         (#'models/build-model-capabilities {} "genai:gemini" "gemini-4-argon" {})))
+    (is (match?
+         ["vertexai:google/gemini-4-neon" {:web-search true
+                                           :image-input? true}]
+         (#'models/build-model-capabilities {} "vertexai:google" "gemini-4-neon" {})))
+    (is (match?
+         ["iu:llama.cpp-prod/meta-models/Muse-Glimmer-30B" {:image-input? true}]
+         (#'models/build-model-capabilities {} "iu:llama.cpp-prod" "meta-models/Muse-Glimmer-30B" {})))
+    (is (match?
+         ["iu:llama.cpp-dev/reflection/Beam-1.0-501B-A23B" {:image-input? false}]
+         (#'models/build-model-capabilities {} "iu:llama.cpp-dev" "reflection/Beam-1.0-501B-A23B" {})))))
 
 (deftest config-overrides->capabilities-test
   (testing "Translates limit and per-1M cost into internal capability keys"
