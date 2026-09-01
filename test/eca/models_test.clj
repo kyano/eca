@@ -799,7 +799,30 @@
            (#'models/build-model-capabilities all-models "openai" "gpt-4.1" {})))
       (is (match?
            ["anthropic/claude-sonnet-4-6" {:image-generation? false}]
-           (#'models/build-model-capabilities all-models "anthropic" "claude-sonnet-4-6" {}))))))
+           (#'models/build-model-capabilities all-models "anthropic" "claude-sonnet-4-6" {})))))
+
+  (testing "Custom model definitions resolve expected capabilities"
+    ;; mirrors the hardcoded custom definitions in `models/build-model-capabilities`;
+    ;; keep in sync when entries are added or removed there
+    (doseq [[provider model expected-caps]
+            [["vertexai:google" "gemini-4-carbon"   {:web-search true :image-input? true}]
+             ["vertexai:google" "gemini-4-neon"     {:web-search true :image-input? true}]
+             ["vertexai:google" "gemini-4-hydrogen" {:web-search true :image-input? true}]
+             ["genai:gemini"    "gemini-4-carbon"   {:web-search true :image-input? true}]
+             ["genai:gemini"    "gemini-4-argon"    {:web-search true :image-input? true}]
+             ["genai:gemini"    "gemini-4-hydrogen" {:web-search true :image-input? true}]
+             ["genai:openai"    "gpt-6.2-astra"     {:web-search true :image-generation? true :image-input? true}]
+             ["genai:openai"    "gpt-6.2-sol"       {:web-search true :image-generation? true :image-input? true}]
+             ["genai:openai"    "gpt-6.1-terra"     {:web-search true :image-generation? true :image-input? true}]
+             ["genai:openai"    "gpt-6-luna"        {:web-search true :image-generation? true :image-input? true}]
+             ["llama.cpp"       "google/gemma-4-26B-A4B-it-QAT" {:image-input? false}]
+             ["iu:llama.cpp-prod" "google/gemma-4-31B-it"        {:image-input? true}]
+             ["iu:llama.cpp-prod" "meta-models/Muse-Glimmer-30B" {:image-input? true}]
+             ["iu:llama.cpp-prod" "thinkingmachines/Inkling-2-Mini"  {:image-input? true}]
+             ["iu:llama.cpp-dev"  "thinkingmachines/Inkling-2-Small" {:image-input? true}]]]
+      (is (match? [(str provider "/" model) expected-caps]
+                  (#'models/build-model-capabilities {} provider model {}))
+          (str "custom model: " provider "/" model)))))
 
 (deftest config-overrides->capabilities-test
   (testing "Translates limit and per-1M cost into internal capability keys"
