@@ -224,3 +224,30 @@ Set a default variant for an agent:
 
 Unavailable variants are ignored. An explicit chat or `spawn_agent` variant overrides the agent default. See [Agents](agents.md) for the complete agent specification.
 
+## Model Default Variant
+
+Set a default variant for a model under `providers.<provider>.models.<model>`:
+
+```javascript title="~/.config/eca/config.json"
+{
+  "providers": {
+    "my-provider": {
+      "models": {
+        "my-model": {
+          "defaultVariant": "high",
+          "variants": {
+            "low": { ... },
+            "high": { ... }
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+Unavailable variants are ignored. ECA resolves variants with the following precedence:
+
+1. Explicit chat selection or request parameter
+2. Agent variant (`agent.<name>.variant`)
+3. Model default variant (`providers.<provider>.models.<model>.defaultVariant`)

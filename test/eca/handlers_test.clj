@@ -118,6 +118,31 @@
                                           {:behavior "custom"})
     (is (match? {:config-updated [{:chat {:select-model "gpt-4.1"}}]
                  :tool-server-update [{}]}
+                (h/messages))))
+
+  (testing "Switching to agent with defaultModel having defaultVariant selects it when agent has no variant"
+    (h/reset-components!)
+    (h/config! {:providers {"anthropic" {:models {"claude-sonnet-4-5"
+                                                  {:defaultVariant "low"
+                                                   :variants {"low" {:a 1} "high" {:a 2}}}}}}
+                :agent {"custom" {:defaultModel "anthropic/claude-sonnet-4-5"}}})
+    (handlers/chat-selected-agent-changed (h/components)
+                                          {:agent "custom"})
+    (is (match? {:config-updated [{:chat {:select-model "anthropic/claude-sonnet-4-5"
+                                          :variants ["high" "low"]
+                                          :select-variant "low"}}]}
+                (h/messages))))
+
+  (testing "Agent configured variant overrides model's defaultVariant on agent switch"
+    (h/reset-components!)
+    (h/config! {:providers {"anthropic" {:models {"claude-sonnet-4-5"
+                                                  {:defaultVariant "low"
+                                                   :variants {"low" {:a 1} "high" {:a 2}}}}}}
+                :agent {"custom" {:defaultModel "anthropic/claude-sonnet-4-5"
+                                  :variant "high"}}})
+    (handlers/chat-selected-agent-changed (h/components)
+                                          {:agent "custom"})
+    (is (match? {:config-updated [{:chat {:select-variant "high"}}]}
                 (h/messages)))))
 
 (deftest chat-selected-model-changed-test
@@ -265,6 +290,43 @@
                                           {:model "anthropic/claude-sonnet-4-6"})
     (is (match? {:config-updated [{:chat {:variants ["high" "medium"]
                                           :select-variant "high"}}]}
+                (h/messages))))
+
+  (testing "Selecting model with defaultVariant selects defaultVariant when agent has no variant"
+    (h/reset-components!)
+    (h/config! {:providers {"anthropic" {:models {"claude-sonnet-4-5"
+                                                  {:defaultVariant "low"
+                                                   :variants {"low" {:a 1} "high" {:a 2}}}}}}
+                :defaultAgent "code"
+                :agent {"code" {}}})
+    (handlers/chat-selected-model-changed (h/components)
+                                          {:model "anthropic/claude-sonnet-4-5"})
+    (is (match? {:config-updated [{:chat {:variants ["high" "low"]
+                                          :select-variant "low"}}]}
+                (h/messages))))
+
+  (testing "Agent variant overrides model's defaultVariant"
+    (h/reset-components!)
+    (h/config! {:providers {"anthropic" {:models {"claude-sonnet-4-5"
+                                                  {:defaultVariant "low"
+                                                   :variants {"low" {:a 1} "high" {:a 2}}}}}}
+                :defaultAgent "code"
+                :agent {"code" {:variant "high"}}})
+    (handlers/chat-selected-model-changed (h/components)
+                                          {:model "anthropic/claude-sonnet-4-5"})
+    (is (match? {:config-updated [{:chat {:select-variant "high"}}]}
+                (h/messages))))
+
+  (testing "Model's defaultVariant not in variants falls back to nil"
+    (h/reset-components!)
+    (h/config! {:providers {"anthropic" {:models {"claude-sonnet-4-5"
+                                                  {:defaultVariant "nonexistent"
+                                                   :variants {"low" {:a 1} "high" {:a 2}}}}}}
+                :defaultAgent "code"
+                :agent {"code" {}}})
+    (handlers/chat-selected-model-changed (h/components)
+                                          {:model "anthropic/claude-sonnet-4-5"})
+    (is (match? {:config-updated [{:chat {:select-variant nil}}]}
                 (h/messages)))))
 
 (deftest chat-selected-model-changed-per-chat-scoping-test
@@ -432,6 +494,39 @@
      {:chat-id "c1" :model "openai/gpt-4.1"})
     (is (match? {:config-updated [{:chat-id "c1"
                                    :chat {:select-variant "high"}}]}
+                (h/messages))))
+
+  (testing "Existing chat: explicit :variant param overrides model's defaultVariant"
+    (h/reset-components!)
+    (h/config! {:providers {"anthropic" {:models {"claude-sonnet-4-5"
+                                                  {:defaultVariant "low"
+                                                   :variants {"low" {:a 1} "high" {:a 2}}}}}}
+                :defaultAgent "code"
+                :agent {"code" {}}})
+    (swap! (h/db*) assoc :chats {"c1" {:id "c1"}})
+    (handlers/chat-selected-model-changed
+     (h/components)
+     {:chat-id "c1"
+      :model "anthropic/claude-sonnet-4-5"
+      :variant "high"})
+    (is (match? {:config-updated [{:chat-id "c1"
+                                   :chat {:select-variant "high"}}]}
+                (h/messages))))
+
+  (testing "Existing chat: valid persisted variant overrides model's defaultVariant"
+    (h/reset-components!)
+    (h/config! {:providers {"anthropic" {:models {"claude-sonnet-4-5"
+                                                  {:defaultVariant "low"
+                                                   :variants {"low" {:a 1} "high" {:a 2}}}}}}
+                :defaultAgent "code"
+                :agent {"code" {}}})
+    (swap! (h/db*) assoc :chats {"c1" {:id "c1" :variant "high"}})
+    (handlers/chat-selected-model-changed
+     (h/components)
+     {:chat-id "c1"
+      :model "anthropic/claude-sonnet-4-5"})
+    (is (match? {:config-updated [{:chat-id "c1"
+                                   :chat {:select-variant "high"}}]}
                 (h/messages)))))
 
 (deftest chat-selected-agent-changed-per-chat-scoping-test
@@ -555,6 +650,21 @@
     (is (match? {:config-updated [{:chat-id "c1"
                                    :chat {:variants ["high" "low"]
                                           :select-variant nil}}]}
+                (h/messages))))
+
+  (testing "Existing chat: persisted variant overrides model's defaultVariant when switching agent"
+    (h/reset-components!)
+    (h/config! {:providers {"openai" {:models {"gpt-4.1"
+                                               {:defaultVariant "low"
+                                                :variants {"low" {:a 1} "high" {:a 2}}}}}}
+                :agent {"plan" {:defaultModel "openai/gpt-4.1"}}})
+    (swap! (h/db*) assoc :chats {"c1" {:id "c1" :variant "high"}})
+    (handlers/chat-selected-agent-changed
+     (h/components)
+     {:chat-id "c1" :agent "plan"})
+    (is (= "high" (get-in (h/db) [:chats "c1" :variant])))
+    (is (match? {:config-updated [{:chat-id "c1"
+                                   :chat {:select-variant "high"}}]}
                 (h/messages)))))
 
 (deftest chat-selected-agent-changed-keeps-established-model-test

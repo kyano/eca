@@ -819,7 +819,13 @@
     (testing "When neither prompt nor agent has a variant, persisted :variant is nil"
       (h/reset-components!)
       (let [{:keys [chat-id]} (run-prompt! {:message "Hey"} nil)]
-        (is (nil? (get-in (h/db) [:chats chat-id :variant])))))))
+        (is (nil? (get-in (h/db) [:chats chat-id :variant])))))
+
+    (testing "When neither prompt nor agent has a variant, model's defaultVariant is persisted"
+      (h/reset-components!)
+      (let [{:keys [chat-id]} (run-prompt! {:message "Hey"}
+                                           {:providers {"openai" {:models {"gpt-5.2" {:defaultVariant "medium"}}}}})]
+        (is (= "medium" (get-in (h/db) [:chats chat-id :variant])))))))
 
 (deftest prompt-persists-chat-agent-test
   (let [api-mock (fn [{:keys [on-first-response-received on-message-received]}]

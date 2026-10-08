@@ -3,6 +3,7 @@
 ## Unreleased
 
 - Add native Google Gemini API provider (`api: "gemini"`) with streaming and non-streaming support, tools, Google search grounding, image input, and thinking support.
+- Add support for model-level `defaultVariant` configuration.
 
 ### Docs site
 - Added: `docs/evolution`. This holds internal planning docs and visual changelogs related to developing the docs site. It is excluded from the published site with `exclude_docs`

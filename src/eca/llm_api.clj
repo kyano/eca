@@ -264,11 +264,15 @@
   "Resolves the effective extra-payload by merging extraPayload with variant payload.
    Variant values take priority over extraPayload on clashing keys.
    When reason? is false, strips provider-specific reasoning keys from the result.
-   Falls back to a \"default\" variant when no explicit variant is selected."
+   Falls back to defaultVariant (or \"default\") when no explicit variant is selected."
   [model-config variant {:keys [api]} reason?]
-  (let [variant-payload (or (get-in model-config [:variants variant])
+  (let [default-variant (or (:defaultVariant model-config)
+                            (:default-variant model-config))
+        variant-payload (or (get-in model-config [:variants variant])
                             (when (nil? variant)
-                              (get-in model-config [:variants "default"])))
+                              (or (when default-variant
+                                    (get-in model-config [:variants default-variant]))
+                                  (get-in model-config [:variants "default"]))))
         extra-payload (:extraPayload model-config)
         merged (if variant-payload
                  (shared/deep-merge extra-payload variant-payload)

@@ -256,30 +256,42 @@
                          :model model
                          :available valid-variants}))))))
 
+(defn ^:private model-default-variant [config full-model]
+  (when full-model
+    (let [[provider model] (shared/full-model->provider+model full-model)
+          model-config (when (and provider model)
+                         (get-in config [:providers provider :models model]))]
+      (or (:defaultVariant model-config)
+          (:default-variant model-config)))))
+
 (defn ^:private new-model+variant
   "[model variant] for a new subagent: explicit args first, then the agent config,
    then the parent's model. The agent's :defaultModel may be a bare alias resolved
    against the parent's provider; it is kept verbatim if it doesn't resolve."
-  [db subagent parent-chat-id user-model user-variant]
+  [config db subagent parent-chat-id user-model user-variant]
   (let [parent-model (get-in db [:chats parent-chat-id :model])
-        parent-provider (some-> parent-model shared/full-model->provider+model first)]
-    [(or user-model
-         (when-let [agent-model (:model subagent)]
-           (or (models/full-model-for db parent-provider agent-model)
-               agent-model))
-         parent-model)
-     (or user-variant (:variant subagent))]))
+        parent-provider (some-> parent-model shared/full-model->provider+model first)
+        model (or user-model
+                  (when-let [agent-model (:model subagent)]
+                    (or (models/full-model-for db parent-provider agent-model)
+                        agent-model))
+                  parent-model)]
+    [model
+     (or user-variant
+         (:variant subagent)
+         (model-default-variant config model))]))
 
 (defn ^:private continued-model+variant
   "[model variant] for a continued subagent: explicit args first, else what it
    used last. A new model gets the agent's configured variant instead of the
    old one, which may not exist for it."
-  [child subagent user-model user-variant]
+  [config child subagent user-model user-variant]
   (let [model (or user-model (:model child))]
     [model (or user-variant
                (if (= model (:model child))
                  (:variant child)
-                 (:variant subagent)))]))
+                 (:variant subagent))
+               (model-default-variant config model))]))
 
 (defn ^:private owned-subagent
   "The chat of `subagent-chat-id` when `parent-chat-id` spawned it with
@@ -476,8 +488,8 @@
         child (get-in db [:chats subagent-chat-id])
         _ (validate-model! db user-model)
         [model variant] (if resume-id
-                          (continued-model+variant child subagent user-model user-variant)
-                          (new-model+variant db subagent chat-id user-model user-variant))
+                          (continued-model+variant config child subagent user-model user-variant)
+                          (new-model+variant config db subagent chat-id user-model user-variant))
         _ (validate-variant! config db model user-variant)
         run (assoc ctx
                    :arguments arguments
@@ -567,9 +579,9 @@
         resume? (some? resume-id)
         child (when (and resume? subagent)
                 (owned-subagent db resume-id chat-id agent-name))
-        [model variant] (if resume?
-                          (continued-model+variant child subagent (get arguments "model") (get arguments "variant"))
-                          (new-model+variant db subagent chat-id (get arguments "model") (get arguments "variant")))]
+        [model variant] (if resume-id
+                          (continued-model+variant config child subagent (get arguments "model") (get arguments "variant"))
+                          (new-model+variant config db subagent chat-id (get arguments "model") (get arguments "variant")))]
     (shared/assoc-some {:type :subagent
                         :subagent-chat-id (if resume?
                                             (:id child)
