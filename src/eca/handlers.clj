@@ -34,13 +34,28 @@
               variants (config/effective-model-variants config provider model model-capabilities user-variants)]
           (config/selectable-variant-names variants))))))
 
+(defn ^:private model-config [config full-model]
+  (when full-model
+    (let [[provider model] (shared/full-model->provider+model full-model)]
+      (when (and provider model)
+        (get-in config [:providers provider :models model])))))
+
 (defn ^:private select-variant
   "Returns the variant to select: the agent's configured variant if it exists
-   in the available variants, otherwise nil."
-  [agent-config variants]
-  (let [agent-variant (:variant agent-config)]
-    (when (and agent-variant variants (some #{agent-variant} variants))
-      agent-variant)))
+   in the available variants, falling back to the model's defaultVariant when valid,
+   otherwise nil."
+  [agent-config model-config variants]
+  (let [agent-variant (:variant agent-config)
+        model-default (or (:defaultVariant model-config)
+                          (:default-variant model-config))]
+    (cond
+      (and agent-variant variants (some #{agent-variant} variants))
+      agent-variant
+
+      (and model-default variants (some #{model-default} variants))
+      model-default
+
+      :else nil)))
 
 (defn welcome-message
   "Builds the welcome message from config, appending a remote hint when available."
@@ -66,6 +81,7 @@
                                 (:defaultAgent fresh-config))
                             fresh-config)
         default-agent-config (get-in fresh-config [:agent default-agent-name])
+        default-model-cfg (model-config fresh-config default-model)
         variants (model-variants fresh-config db default-model)]
     (config/notify-fields-changed-only!
      {:chat
@@ -76,7 +92,7 @@
                :select-model default-model
                :select-agent default-agent-name
                :variants (or variants [])
-               :select-variant (select-variant default-agent-config variants)
+               :select-variant (select-variant default-agent-config default-model-cfg variants)
                :welcome-message (welcome-message fresh-config)
           ;; Deprecated, remove after changing emacs, vscode and intellij.
                :default-model default-model
@@ -459,7 +475,10 @@
      (let [chat-model (when chat-id (get-in @db* [:chats chat-id :model]))
            model (or chat-model default-model)
            variants (model-variants config @db* model)
-           agent-variant (select-variant agent-config variants)
+           model-cfg (model-config config model)
+           agent-variant (when-let [av (:variant agent-config)]
+                           (when (and variants (some #{av} variants))
+                             av))
            ;; CAS: only mutate the chat record if it still exists at swap
            ;; time, avoiding TOCTOU resurrection when chat/delete races us.
            ;; Note: when the new agent has no `:variant` configured,
@@ -481,7 +500,8 @@
          (let [chat-variant (get-in old-db [:chats chat-id :variant])
                selected-variant (or agent-variant
                                     (when (and chat-variant (some #{chat-variant} variants))
-                                      chat-variant))
+                                      chat-variant)
+                                    (select-variant agent-config model-cfg variants))
                payload {:chat {:select-model model
                                :variants (or variants [])
                                :select-variant selected-variant}}]
@@ -490,7 +510,8 @@
          ;; chat deleted between the read above and the swap can't leak
          ;; its model session-wide.
          (let [variants (model-variants config @db* default-model)
-               agent-variant (select-variant agent-config variants)
+               default-model-cfg (model-config config default-model)
+               agent-variant (select-variant agent-config default-model-cfg variants)
                payload {:chat {:select-model default-model
                                :variants (or variants [])
                                :select-variant agent-variant}}]
@@ -530,6 +551,7 @@
                                   (:defaultAgent config))
                               config)
           variants (model-variants config @db* model)
+          model-cfg (model-config config model)
           ;; CAS: only mutate the chat record if it still exists at swap
           ;; time, avoiding TOCTOU resurrection when chat/delete races us.
           [old-db _new-db] (when chat-id
@@ -553,13 +575,13 @@
               selected-variant (cond
                                  (valid? variant) variant
                                  (valid? chat-variant) chat-variant
-                                 :else (select-variant agent-config variants))
+                                 :else (select-variant agent-config model-cfg variants))
               payload {:chat {:variants (or variants [])
                               :select-variant selected-variant}}]
           (config/notify-fields-changed-only! payload messenger db* chat-id))
         (let [agent-config (get-in config [:agent default-agent-name])
               payload {:chat {:variants (or variants [])
-                              :select-variant (select-variant agent-config variants)}}]
+                              :select-variant (select-variant agent-config model-cfg variants)}}]
           ;; Legacy session-wide path: keep the historical hack that forces
           ;; the next diff to emit when the requested variant is not in the
           ;; new model's variant set.

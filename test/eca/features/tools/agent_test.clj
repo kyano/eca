@@ -1022,6 +1022,37 @@
           (is (= "company-litellm/explorer-small" (:model @chat-prompt-called*))
               "bare alias should resolve to the parent provider's model"))))))
 
+(deftest spawn-agent-default-variant-test
+  (testing "falls back to subagent model's defaultVariant when neither user nor subagent specifies a variant"
+    (let [config (-> test-config
+                     (assoc-in [:providers "anthropic" :models "claude-sonnet-4-6" :defaultVariant] "medium"))
+          db* (atom {:chats {"chat-1" {:id "chat-1" :model "anthropic/claude-sonnet-4-6"}}
+                     :models {"anthropic/claude-sonnet-4-6" {}}})
+          subagent-chat-id "subagent-tc-1"
+          chat-prompt-called* (promise)]
+      (with-redefs [requiring-resolve
+                    (fn [sym]
+                      (case sym
+                        eca.features.chat/prompt
+                        (fn [params _db* _messenger _config _metrics]
+                          (deliver chat-prompt-called* params)
+                          (swap! db* assoc-in [:chats subagent-chat-id :status] :idle)
+                          (swap! db* assoc-in [:chats subagent-chat-id :messages]
+                                 [{:role "assistant"
+                                   :content [{:type :text :text "Done."}]}]))
+                        (clojure.lang.RT/var (namespace sym) (name sym))))]
+        (let [result ((spawn-handler)
+                      {"agent" "explorer" "task" "explore" "activity" "exploring"}
+                      {:db* db*
+                       :config config
+                       :messenger (h/messenger)
+                       :metrics (h/metrics)
+                       :chat-id "chat-1"
+                       :tool-call-id "tc-1"
+                       :call-state-fn (constantly {:status :executing})})]
+          (is (match? {:error false} result))
+          (is (= "medium" (:variant @chat-prompt-called*))))))))
+
 (deftest extract-final-summary-test
   (testing "extracts text from last assistant message"
     (is (= "Hello world"

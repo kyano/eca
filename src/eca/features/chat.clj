@@ -2046,6 +2046,12 @@
                                                                editor-state-contents
                                                                image-contents))}]
             [provider model] (when full-model (shared/full-model->provider+model full-model))
+            model-config (when (and provider model)
+                           (get-in config [:providers provider :models model]))
+            variant (or (:variant base-chat-ctx)
+                        (:defaultVariant model-config)
+                        (:default-variant model-config))
+            _ (swap! db* assoc-in [:chats chat-id :variant] variant)
             chat-ctx (merge base-chat-ctx
                             {:instructions instructions
                              :all-tools all-tools
@@ -2053,6 +2059,7 @@
                              :full-model full-model
                              :provider provider
                              :model model
+                             :variant variant
                              :messenger messenger})]
         ;; Clear prompt-finished? so finish-chat-prompt! can properly terminate
         ;; this prompt cycle. prompt-messages! already does this for regular

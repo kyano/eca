@@ -1261,7 +1261,89 @@
                                             :variants ["high" "low"]
                                             :select-variant "low"}}]}
                   (h/messages)))
-      (is (= session-defaults (:last-config-notified (h/db)))))))
+      (is (= session-defaults (:last-config-notified (h/db))))))
+
+  (testing "Model with defaultVariant selected when agent and chat have no variant set"
+    (h/reset-components!)
+    (h/config! {:providers {"anthropic" {:models {"claude-sonnet-4-5"
+                                                  {:defaultVariant "low"
+                                                   :variants {"low" {:a 1}
+                                                              "medium" {:a 2}
+                                                              "high" {:a 3}}}}}}
+                :defaultAgent "code"
+                :agent {"code" {}}})
+    (swap! (h/db*) update :models
+           #(merge % {"anthropic/claude-sonnet-4-5" {:tools true}}))
+    (config/notify-selected-model-changed! "anthropic/claude-sonnet-4-5"
+                                           (h/db*) (h/messenger) (h/config))
+    (is (match? {:config-updated [{:chat {:select-model "anthropic/claude-sonnet-4-5"
+                                          :variants ["high" "low" "medium"]
+                                          :select-variant "low"}}]}
+                (h/messages))))
+
+  (testing "Agent configured variant overrides model's defaultVariant"
+    (h/reset-components!)
+    (h/config! {:providers {"anthropic" {:models {"claude-sonnet-4-5"
+                                                  {:defaultVariant "low"
+                                                   :variants {"low" {:a 1}
+                                                              "medium" {:a 2}
+                                                              "high" {:a 3}}}}}}
+                :defaultAgent "code"
+                :agent {"code" {:variant "medium"}}})
+    (swap! (h/db*) update :models
+           #(merge % {"anthropic/claude-sonnet-4-5" {:tools true}}))
+    (config/notify-selected-model-changed! "anthropic/claude-sonnet-4-5"
+                                           (h/db*) (h/messenger) (h/config))
+    (is (match? {:config-updated [{:chat {:select-variant "medium"}}]}
+                (h/messages))))
+
+  (testing "Chat's explicit or persisted variant overrides model's defaultVariant"
+    (h/reset-components!)
+    (h/config! {:providers {"anthropic" {:models {"claude-sonnet-4-5"
+                                                  {:defaultVariant "low"
+                                                   :variants {"low" {:a 1}
+                                                              "medium" {:a 2}
+                                                              "high" {:a 3}}}}}}
+                :defaultAgent "code"
+                :agent {"code" {}}})
+    (swap! (h/db*) update :models
+           #(merge % {"anthropic/claude-sonnet-4-5" {:tools true}}))
+    (config/notify-selected-model-changed! "anthropic/claude-sonnet-4-5"
+                                           (h/db*) (h/messenger) (h/config)
+                                           "high")
+    (is (match? {:config-updated [{:chat {:select-variant "high"}}]}
+                (h/messages))))
+
+  (testing "Model's defaultVariant not among available variants is ignored (falls back to nil)"
+    (h/reset-components!)
+    (h/config! {:providers {"anthropic" {:models {"claude-sonnet-4-5"
+                                                  {:defaultVariant "invalid-variant"
+                                                   :variants {"low" {:a 1}
+                                                              "medium" {:a 2}
+                                                              "high" {:a 3}}}}}}
+                :defaultAgent "code"
+                :agent {"code" {}}})
+    (swap! (h/db*) update :models
+           #(merge % {"anthropic/claude-sonnet-4-5" {:tools true}}))
+    (config/notify-selected-model-changed! "anthropic/claude-sonnet-4-5"
+                                           (h/db*) (h/messenger) (h/config))
+    (is (match? {:config-updated [{:chat {:select-variant nil}}]}
+                (h/messages))))
+
+  (testing "Model with kebab-case :default-variant selected when agent and chat have no variant set"
+    (h/reset-components!)
+    (h/config! {:providers {"anthropic" {:models {"claude-sonnet-4-5"
+                                                  {:default-variant "low"
+                                                   :variants {"low" {:a 1}
+                                                              "high" {:a 2}}}}}}
+                :defaultAgent "code"
+                :agent {"code" {}}})
+    (swap! (h/db*) update :models
+           #(merge % {"anthropic/claude-sonnet-4-5" {:tools true}}))
+    (config/notify-selected-model-changed! "anthropic/claude-sonnet-4-5"
+                                           (h/db*) (h/messenger) (h/config))
+    (is (match? {:config-updated [{:chat {:select-variant "low"}}]}
+                (h/messages)))))
 
 (deftest notify-selected-trust-changed-test
   (testing "4-arity: chat-id scopes trust without changing session defaults"

@@ -475,6 +475,41 @@
         (is (= {:effort "medium" :summary "auto"} (get-in @captured* [:extra-payload :reasoning])))
         (is (nil? (get-in @captured* [:extra-payload :reasoning_effort])))))))
 
+(deftest extra-payload-considering-variant-test
+  (testing "falls back to defaultVariant payload when variant is nil"
+    (let [model-config {:defaultVariant "high"
+                        :variants {"low" {:effort "low"}
+                                   "high" {:effort "high"}}}
+          payload (#'llm-api/extra-payload-considering-variant model-config nil {:api :anthropic} true)]
+      (is (= {:effort "high"} payload))))
+
+  (testing "falls back to kebab-case :default-variant when variant is nil"
+    (let [model-config {:default-variant "low"
+                        :variants {"low" {:effort "low"}
+                                   "high" {:effort "high"}}}
+          payload (#'llm-api/extra-payload-considering-variant model-config nil {:api :anthropic} true)]
+      (is (= {:effort "low"} payload))))
+
+  (testing "explicit variant overrides model's defaultVariant"
+    (let [model-config {:defaultVariant "low"
+                        :variants {"low" {:effort "low"}
+                                   "high" {:effort "high"}}}
+          payload (#'llm-api/extra-payload-considering-variant model-config "high" {:api :anthropic} true)]
+      (is (= {:effort "high"} payload))))
+
+  (testing "falls back to \"default\" variant when defaultVariant is not set"
+    (let [model-config {:variants {"default" {:effort "medium"}
+                                   "high" {:effort "high"}}}
+          payload (#'llm-api/extra-payload-considering-variant model-config nil {:api :anthropic} true)]
+      (is (= {:effort "medium"} payload))))
+
+  (testing "returns extraPayload alone when variant is nil and defaultVariant does not exist in variants"
+    (let [model-config {:extraPayload {:temp 0.7}
+                        :defaultVariant "unknown"
+                        :variants {"low" {:effort "low"}}}
+          payload (#'llm-api/extra-payload-considering-variant model-config nil {:api :anthropic} true)]
+      (is (= {:temp 0.7} payload)))))
+
 (deftest prompt-passes-image-generation-to-openai-handler-test
   (testing "openai branch forwards :image-generation true to create-response! when capability is on"
     (let [captured* (atom nil)]

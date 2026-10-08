@@ -3,6 +3,7 @@
 ## Unreleased
 
 - Add native Google Gemini API provider (`api: "gemini"`) with streaming and non-streaming support, tools, Google search grounding, image input, and thinking support.
+- Add support for model-level `defaultVariant` configuration.
 
 ## 0.163.0
 

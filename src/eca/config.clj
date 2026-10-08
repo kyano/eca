@@ -1054,16 +1054,20 @@
            agent-config (get-in config [:agent default-agent-name])
            [provider model-name] (shared/full-model->provider+model full-model)
            model-capabilities (get-in @db* [:models full-model])
-           user-variants (when (and provider model-name)
-                           (get-in config [:providers provider :models model-name :variants]))
+           model-config (when (and provider model-name)
+                          (get-in config [:providers provider :models model-name]))
+           user-variants (:variants model-config)
            variants (when (and provider model-name)
                       (selectable-variant-names
                        (effective-model-variants config provider model-name model-capabilities user-variants)))
            agent-variant (:variant agent-config)
+           model-default-variant (or (:defaultVariant model-config)
+                                     (:default-variant model-config))
            valid? (fn [v] (and v variants (some #{v} variants)))
            select-variant (cond
                             (valid? chat-variant) chat-variant
                             (valid? agent-variant) agent-variant
+                            (valid? model-default-variant) model-default-variant
                             :else nil)
            selection {:model full-model
                       :variants (or variants [])

@@ -937,6 +937,11 @@
           "additionalProperties": {
             "$ref": "#/definitions/variantPayload"
           }
+        },
+        "defaultVariant": {
+          "type": "string",
+          "description": "Default variant to use for this model when neither the agent nor the chat specifies one.",
+          "markdownDescription": "Default variant to use for this model when neither the agent nor the chat specifies one."
         }
       },
       "additionalProperties": false

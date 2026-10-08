@@ -261,7 +261,12 @@
                                 {:variant user-variant
                                  :model subagent-model
                                  :available valid-variants})))))
-        variant (or user-variant (:variant subagent))]
+        [subagent-provider subagent-model-name] (when subagent-model (shared/full-model->provider+model subagent-model))
+        model-config (when (and subagent-provider subagent-model-name)
+                       (get-in config [:providers subagent-provider :models subagent-model-name]))
+        model-default-variant (or (:defaultVariant model-config)
+                                  (:default-variant model-config))
+        variant (or user-variant (:variant subagent) model-default-variant)]
 
     (logger/info logger-tag (format "Spawning agent '%s' for task: %s (model: %s, variant: %s)" agent-name task subagent-model (or variant "default")))
 
