@@ -76,9 +76,10 @@
    "max" {:reasoning {:effort "max" :summary "auto"}}})
 
 (def ^:private openai-gpt-6-variants
-  "Variants for gpt-6 models (gpt-6-astra). Same as `openai-gpt-5-6-variants`
-   minus \"none\": OpenAI documents that GPT-6 Astra rejects the none reasoning
-   effort. Codex also lists \"ultra\" but downgrades it to \"max\" on the wire."
+  "Variants for gpt-6 models rejecting \"none\" (such as gpt-6-astra and
+   gpt-6.1-sol). Same as `openai-gpt-5-6-variants` minus \"none\": OpenAI
+   documents that these models reject the none reasoning effort. Codex
+   also lists \"ultra\" but downgrades it to \"max\" on the wire."
   {"low" {:reasoning {:effort "low" :summary "auto"}}
    "medium" {:reasoning {:effort "medium" :summary "auto"}}
    "high" {:reasoning {:effort "high" :summary "auto"}}
@@ -302,10 +303,13 @@
                      ".*gpt[-._]5[-._]6(?!\\d)" {:variants openai-gpt-5-6-variants
                                                  :api openai-responses-apis
                                                  :excludeProviders ["github-copilot"]}
-                     ;; gpt-6 family (gpt-6-astra), not gpt-6.x point releases.
-                     ".*gpt[-._]6(?![-._]?\\d)" {:variants openai-gpt-6-variants
-                                                 :api openai-responses-apis
-                                                 :excludeProviders ["github-copilot"]}
+                     ;; gpt-6 models: gpt-6-sol and gpt-6-luna support "none", while other models (e.g. gpt-6-astra, gpt-6.1-sol) reject "none".
+                     "gpt[-._]6[-._](?:sol|luna)" {:variants openai-gpt-5-6-variants
+                                                   :api openai-responses-apis
+                                                   :excludeProviders ["github-copilot"]}
+                     "gpt[-._]6(?!\\d|[-._]?(?:sol|luna))" {:variants openai-gpt-6-variants
+                                                            :api openai-responses-apis
+                                                            :excludeProviders ["github-copilot"]}
                      ;; Same GPT families served through openai-chat providers (e.g.
                      ;; LiteLLM/Azure gateways): /chat/completions takes a top-level
                      ;; `reasoning_effort` string instead of `reasoning.effort` (#609).
@@ -315,9 +319,12 @@
                      "(?:.*gpt[-._]5[-._]6(?!\\d))" {:variants openai-chat-gpt-5-6-variants
                                                      :api "openai-chat"
                                                      :excludeProviders ["github-copilot"]}
-                     "(?:.*gpt[-._]6(?![-._]?\\d))" {:variants openai-chat-gpt-6-variants
-                                                     :api "openai-chat"
-                                                     :excludeProviders ["github-copilot"]}
+                     "(?:gpt[-._]6[-._](?:sol|luna))" {:variants openai-chat-gpt-5-6-variants
+                                                       :api "openai-chat"
+                                                       :excludeProviders ["github-copilot"]}
+                     "(?:gpt[-._]6(?!\\d|[-._]?(?:sol|luna)))" {:variants openai-chat-gpt-6-variants
+                                                                :api "openai-chat"
+                                                                :excludeProviders ["github-copilot"]}
                      ".*deepseek[-._]v4[-._](?:pro|flash)" {:variants deepseek-variants
                                                             :api "openai-chat"}
                      "(?i).*glm[-._]5[-._]2" {:variants glm-variants}}
