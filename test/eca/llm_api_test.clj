@@ -7,6 +7,7 @@
    [eca.config :as config]
    [eca.llm-api :as llm-api]
    [eca.llm-providers.anthropic :as llm-providers.anthropic]
+   [eca.llm-providers.gemini :as llm-providers.gemini]
    [eca.llm-providers.ollama :as llm-providers.ollama]
    [eca.llm-providers.openai :as llm-providers.openai]
    [eca.llm-providers.openai-chat :as llm-providers.openai-chat]
@@ -897,6 +898,119 @@
                                          :models {"claude-sonnet-4-6" {}}}}}
         :sync? false}))
     (is (= 600 (:stream-idle-timeout-seconds @captured*)))))
+
+(deftest prompt-routes-to-gemini-handler-test
+  (testing "custom provider with :api gemini routes to llm-providers.gemini/chat!"
+    (let [captured* (atom nil)]
+      (with-redefs [llm-providers.gemini/chat!
+                    (fn [opts _callbacks] (reset! captured* opts) :ok)]
+        (#'eca.llm-api/prompt!
+         {:provider "my-gemini"
+          :model "gemini-3-pro"
+          :model-capabilities {:tools true
+                               :reason? true
+                               :model-name "gemini-3-pro"}
+          :user-messages [{:role "user" :content [{:type :text :text "hi"}]}]
+          :past-messages []
+          :tools []
+          :provider-auth {:api-key "test-key"}
+          :config {:streamIdleTimeoutSeconds 180
+                   :providers {"my-gemini" {:api "gemini"
+                                            :url "https://my-gemini.example.com"
+                                            :key "test-key"
+                                            :completionUrlRelativePath "/v1beta/custom/{model}:streamGenerateContent"
+                                            :extraHeaders {"X-Custom" "header-val"}
+                                            :models {"gemini-3-pro" {:extraPayload {:generationConfig {:temperature 0.7}}}}}}}
+          :sync? false}))
+      (is (some? @captured*))
+      (is (= "gemini-3-pro" (:model @captured*)))
+      (is (= "https://my-gemini.example.com" (:api-url @captured*)))
+      (is (= "/v1beta/custom/{model}:streamGenerateContent" (:url-relative-path @captured*)))
+      (is (= {"X-Custom" "header-val"} (:extra-headers @captured*)))
+      (is (= {:generationConfig {:temperature 0.7}} (:extra-payload @captured*)))
+      (is (= 180 (:stream-idle-timeout-seconds @captured*))))))
+
+(deftest sync-prompt-gemini-test
+  (testing "sync-prompt! calls gemini chat! with nil callbacks and returns output-text"
+    (let [captured-opts* (atom nil)
+          captured-callbacks* (atom :unset)]
+      (with-redefs [llm-providers.gemini/chat!
+                    (fn [opts callbacks]
+                      (reset! captured-opts* opts)
+                      (reset! captured-callbacks* callbacks)
+                      {:output-text "Generated Chat Title"})]
+        (let [result (llm-api/sync-prompt!
+                      {:provider "my-gemini"
+                       :model "gemini-3-pro"
+                       :model-capabilities {:tools false :reason? false :web-search false}
+                       :instructions "You are a title generator."
+                       :prompt "hi"
+                       :provider-auth {:api-key "test-key"}
+                       :config {:providers {"my-gemini" {:api "gemini"
+                                                         :url "https://my-gemini.example.com"
+                                                         :key "test-key"
+                                                         :completionUrlRelativePath "/v1/models/{model}:streamGenerateContent?alt=sse"
+                                                         :models {"gemini-3-pro" {}}}}}})]
+          (is (nil? @captured-callbacks*))
+          (is (= "/v1/models/{model}:streamGenerateContent?alt=sse" (:url-relative-path @captured-opts*)))
+          (is (= {:output-text "Generated Chat Title"} result))))))
+
+  (testing "sync-or-async-prompt! with :extraPayload {:stream false} on :gemini runs through the sync loop"
+    (let [events* (atom [])
+          request-bodies* (atom [])
+          resp-1 {:candidates [{:content {:parts [{:thought true :text "Thinking first"}
+                                                  {:text "Calling search"}
+                                                  {:functionCall {:name "search" :args {:q "eca"}}}]
+                                          :role "model"}
+                                :finishReason "STOP"}]
+                  :usageMetadata {:promptTokenCount 10 :candidatesTokenCount 4 :thoughtsTokenCount 2}}
+          resp-2 {:candidates [{:content {:parts [{:text "Found ECA"}]
+                                          :role "model"}
+                                :finishReason "STOP"}]
+                  :usageMetadata {:promptTokenCount 18 :candidatesTokenCount 3}}]
+      (with-redefs [http/post (fn [_url {:keys [body]}]
+                                (let [parsed (json/parse-string body true)
+                                      idx (count (swap! request-bodies* conj parsed))]
+                                  {:status 200
+                                   :body (if (= 1 idx) resp-1 resp-2)}))]
+        (llm-api/sync-or-async-prompt!
+         {:provider "my-gemini"
+          :model "gemini-3-pro"
+          :model-capabilities {:tools true :reason? true :web-search false :model-name "gemini-3-pro"}
+          :instructions "Be helpful"
+          :user-messages [{:role "user" :content [{:type :text :text "find eca"}]}]
+          :past-messages []
+          :tools [{:full-name "search" :description "Search" :parameters {:type "object"}}]
+          :provider-auth {:api-key "test-key"}
+          :config {:providers {"my-gemini" {:api "gemini"
+                                            :url "https://my-gemini.example.com"
+                                            :key "test-key"
+                                            :models {"gemini-3-pro" {:extraPayload {:stream false
+                                                                                    :generationConfig {:temperature 0.3}}}}}}}
+          :on-first-response-received #(swap! events* conj [:first %])
+          :on-reason #(swap! events* conj [:reason %])
+          :on-message-received #(swap! events* conj [:msg %])
+          :on-usage-updated #(swap! events* conj [:usage %])
+          :on-prepare-tool-call #(swap! events* conj [:prepare %])
+          :on-tools-called (fn [calls]
+                             (swap! events* conj [:tools-called calls])
+                             {:new-messages [{:role "user" :content "search results"}]
+                              :tools []})
+          :on-error #(swap! events* conj [:error %])}))
+      (is (= 2 (count @request-bodies*)))
+      (is (every? #(not (contains? % :stream)) @request-bodies*))
+      (is (match? [[:first {:status :started}]
+                   [:reason {:status :started :id string?}]
+                   [:reason {:status :thinking :id string? :text "Thinking first"}]
+                   [:reason {:status :finished :id string?}]
+                   [:msg {:type :text :text "Calling search"}]
+                   [:usage {:input-tokens 10 :output-tokens 6}]
+                   [:prepare {:full-name "search" :arguments {"q" "eca"}}]
+                   [:tools-called [{:full-name "search" :arguments {"q" "eca"}}]]
+                   [:msg {:type :text :text "Found ECA"}]
+                   [:usage {:input-tokens 18 :output-tokens 3}]
+                   [:msg {:type :finish :finish-reason "stop"}]]
+                  @events*)))))
 
 (deftest prompt-merges-provider-and-model-extra-headers-test
   (testing "provider-level extraHeaders are sent and model-level ones win on conflicts"
