@@ -2197,6 +2197,12 @@
                                                                editor-state-contents
                                                                image-contents))}]
             [provider model] (when full-model (shared/full-model->provider+model full-model))
+            model-config (when (and provider model)
+                           (get-in config [:providers provider :models model]))
+            variant (or (:variant base-chat-ctx)
+                        (:defaultVariant model-config)
+                        (:default-variant model-config))
+            _ (swap! db* assoc-in [:chats chat-id :variant] variant)
             chat-ctx (cond-> (merge base-chat-ctx
                                     {:instructions instructions
                                      :all-tools all-tools
@@ -2204,6 +2210,7 @@
                                      :full-model full-model
                                      :provider provider
                                      :model model
+                                     :variant variant
                                      :messenger messenger})
                        ;; Like the cursor, only normal prompts send the attached
                        ;; contexts; /prompt-show, commands and MCP prompts don't

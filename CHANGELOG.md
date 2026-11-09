@@ -19,6 +19,7 @@
 - Remove the `task` tool's reminder to re-check the whole request when the last task is done; tasks are already verified on `complete`.
 - Simplify the `code` agent's request-checking instructions: no literal reading of loose instructions, no final sweep, no handling of hypothetical edge cases.
 - Add native Google Gemini API provider (`api: "gemini"`) with streaming and non-streaming support, tools, Google search grounding, image input, and thinking support.
+- Add support for model-level `defaultVariant` configuration.
 
 ## 0.170.5
 
