@@ -60,6 +60,7 @@ You can turn any module off, and write your own in Clojure. ECA runs them with [
     | [`eca/api-openai-chat`](https://github.com/editor-code-assistant/eca/blob/master/src/eca/modules/providers/openai_chat.clj) | The OpenAI Chat Completions API, which OpenAI-compatible providers speak. |
     | [`eca/api-ollama`](https://github.com/editor-code-assistant/eca/blob/master/src/eca/modules/providers/ollama.clj) | The Ollama chat API. |
     | [`eca/api-bedrock`](https://github.com/editor-code-assistant/eca/blob/master/src/eca/modules/providers/bedrock.clj) | The AWS Bedrock Converse API. |
+    | [`eca/api-gemini`](https://github.com/editor-code-assistant/eca/blob/master/src/eca/modules/providers/gemini.clj) | The Google Gemini API. |
     | **Providers** | |
     | [`eca/llm-providers`](https://github.com/editor-code-assistant/eca/blob/master/src/eca/modules/llm_providers.clj) | Logging into providers, with `/login` or the providers panel, and their subscription quotas (`/quota`). Requests don't need it. |
     | [`eca/anthropic`](https://github.com/editor-code-assistant/eca/blob/master/src/eca/modules/providers/anthropic.clj) | Claude models from Anthropic: a Max subscription, a Console key or a pasted key. |
@@ -67,6 +68,7 @@ You can turn any module off, and write your own in Clojure. ECA runs them with [
     | [`eca/bedrock`](https://github.com/editor-code-assistant/eca/blob/master/src/eca/modules/providers/bedrock.clj) | Models on AWS Bedrock, with a bearer token. |
     | [`eca/copilot`](https://github.com/editor-code-assistant/eca/blob/master/src/eca/modules/providers/copilot.clj) | GitHub Copilot models, with your account's model list and quota. |
     | [`eca/deepseek`](https://github.com/editor-code-assistant/eca/blob/master/src/eca/modules/providers/deepseek.clj) | DeepSeek models. |
+    | [`eca/gemini`](https://github.com/editor-code-assistant/eca/blob/master/src/eca/modules/providers/gemini.clj) | Google Gemini models. |
     | [`eca/google`](https://github.com/editor-code-assistant/eca/blob/master/src/eca/modules/providers/google.clj) | Gemini models, through Google's OpenAI-compatible API. |
     | [`eca/litellm`](https://github.com/editor-code-assistant/eca/blob/master/src/eca/modules/providers/litellm.clj) | A LiteLLM proxy, at your URL. |
     | [`eca/lmstudio`](https://github.com/editor-code-assistant/eca/blob/master/src/eca/modules/providers/lmstudio.clj) | Local models through LM Studio. |
@@ -361,7 +363,7 @@ An unknown key is ignored, with a warning in `/modules`.
 | `:quota` | `{:fetch (fn [ctx]) :headers (fn [headers])}`: a subscription login's quota windows, `[{:id :label :used-percent :resets-at :window-minutes}]`, from its usage endpoint and from a response's headers. |
 | `:errors` | `{:enrich :recoverable? :recover! :retry-after-ms}`, each `(fn [ctx])`: its error messages, recoveries and retry times. |
 
-`:apis` maps an API name, like `"openai-chat"`, to its entry. A provider's config names it with `:api`, any module's API: `"openai-chat"`, `"openai-responses"` (also `"openai"`), `"anthropic"`, `"ollama"` and `"bedrock"` are ECA's. The request and callbacks follow ECA's own code: see [ECA's APIs](https://github.com/editor-code-assistant/eca/tree/master/src/eca/modules/providers), e.g. `openai_chat.clj`.
+`:apis` maps an API name, like `"openai-chat"`, to its entry. A provider's config names it with `:api`, any module's API: `"openai-chat"`, `"openai-responses"` (also `"openai"`), `"anthropic"`, `"ollama"`, `"bedrock"` and `"gemini"` are ECA's. The request and callbacks follow ECA's own code: see [ECA's APIs](https://github.com/editor-code-assistant/eca/tree/master/src/eca/modules/providers), e.g. `openai_chat.clj`.
 
 | Key | |
 |-----|--|
