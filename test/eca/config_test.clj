@@ -1080,17 +1080,25 @@
         (is (nil? (config/effective-model-variants default-config "github-copilot" "claude-opus-4.5"
                                                    {:api :openai-chat} nil)))))
 
-    (testing "Default config: gpt-6 models get effort variants without none"
+    (testing "Default config: gpt-6 models get effort variants without none unless model supports none"
       (let [default-config (assoc-in (#'config/initial-config) [:providers "custom" :api] "openai-responses")
             gpt-6-variants {"low" {:reasoning {:effort "low" :summary "auto"}}
                             "medium" {:reasoning {:effort "medium" :summary "auto"}}
                             "high" {:reasoning {:effort "high" :summary "auto"}}
                             "xhigh" {:reasoning {:effort "xhigh" :summary "auto"}}
-                            "max" {:reasoning {:effort "max" :summary "auto"}}}]
+                            "max" {:reasoning {:effort "max" :summary "auto"}}}
+            gpt-6-variants-with-none (assoc gpt-6-variants "none" {:reasoning {:effort "none"}})]
+        ;; gpt-6-astra and gpt-6.1-sol reject none
         (is (= gpt-6-variants
                (config/effective-model-variants default-config "openai" "gpt-6-astra" nil nil)))
         (is (= gpt-6-variants
+               (config/effective-model-variants default-config "openai" "gpt-6.1-sol" nil nil)))
+        (is (= gpt-6-variants
                (config/effective-model-variants default-config "custom" "gpt_6_astra" nil nil)))
+        (is (not (contains? (config/effective-model-variants default-config "openai" "gpt-6-astra" nil nil)
+                            "none")))
+        (is (not (contains? (config/effective-model-variants default-config "openai" "gpt-6.1-sol" nil nil)
+                            "none")))
         ;; gpt-6.2 models reject none too
         (doseq [model ["gpt-6.2-astra" "gpt-6.2-sol"]]
           (is (= gpt-6-variants
@@ -1098,10 +1106,20 @@
               model))
         (is (= gpt-6-variants
                (config/effective-model-variants default-config "custom" "gpt_6_2_sol" nil nil)))
+        ;; gpt-6-luna and gpt-6.1-terra support none
+        (is (= gpt-6-variants-with-none
+               (config/effective-model-variants default-config "openai" "gpt-6-luna" nil nil)))
+        (is (= gpt-6-variants-with-none
+               (config/effective-model-variants default-config "openai" "gpt-6.1-terra" nil nil)))
+        (is (contains? (config/effective-model-variants default-config "openai" "gpt-6-luna" nil nil)
+                       "none"))
+        (is (contains? (config/effective-model-variants default-config "openai" "gpt-6.1-terra" nil nil)
+                       "none"))
         ;; gpt-5.6 keeps its own set, including none
         (is (contains? (config/effective-model-variants default-config "openai" "gpt-5.6-sol" nil nil)
                        "none"))
         ;; other point releases and Copilot are not matched
+        (is (nil? (config/effective-model-variants default-config "openai" "gpt-6-sol" nil nil)))
         (is (nil? (config/effective-model-variants default-config "openai" "gpt-6.1" nil nil)))
         (is (nil? (config/effective-model-variants default-config "openai" "gpt-6.20" nil nil)))
         (is (nil? (config/effective-model-variants default-config "openai" "gpt-60" nil nil)))
@@ -1111,15 +1129,36 @@
     (testing "Default config: GPT models on openai-chat providers (e.g. LiteLLM/Azure gateways) get reasoning_effort variants (#609)"
       (let [default-config (-> (#'config/initial-config)
                                (assoc-in [:providers "gateway" :api] "openai-chat")
-                               (assoc-in [:providers "legacy" :api] "openai"))]
-        (doseq [model ["openai/gpt-6-astra" "openai/gpt-6.2-astra" "gpt-6.2-sol"]]
-          (is (= {"low" {:reasoning_effort "low"}
-                  "medium" {:reasoning_effort "medium"}
-                  "high" {:reasoning_effort "high"}
-                  "xhigh" {:reasoning_effort "xhigh"}
-                  "max" {:reasoning_effort "max"}}
+                               (assoc-in [:providers "legacy" :api] "openai"))
+            chat-variants-without-none {"low" {:reasoning_effort "low"}
+                                        "medium" {:reasoning_effort "medium"}
+                                        "high" {:reasoning_effort "high"}
+                                        "xhigh" {:reasoning_effort "xhigh"}
+                                        "max" {:reasoning_effort "max"}}
+            chat-variants-with-none (assoc chat-variants-without-none "none" {:reasoning_effort "none"})]
+        ;; gpt-6-astra and gpt-6.1-sol exclude none
+        (is (= chat-variants-without-none
+               (config/effective-model-variants default-config "gateway" "openai/gpt-6-astra" nil nil)))
+        (is (= chat-variants-without-none
+               (config/effective-model-variants default-config "gateway" "openai/gpt-6.1-sol" nil nil)))
+        (is (not (contains? (config/effective-model-variants default-config "gateway" "openai/gpt-6-astra" nil nil)
+                            "none")))
+        (is (not (contains? (config/effective-model-variants default-config "gateway" "openai/gpt-6.1-sol" nil nil)
+                            "none")))
+        ;; gpt-6.2-astra and gpt-6.2-sol exclude none
+        (doseq [model ["openai/gpt-6.2-astra" "gpt-6.2-sol"]]
+          (is (= chat-variants-without-none
                  (config/effective-model-variants default-config "gateway" model nil nil))
               model))
+        ;; gpt-6-luna and gpt-6.1-terra include none
+        (is (= chat-variants-with-none
+               (config/effective-model-variants default-config "gateway" "openai/gpt-6-luna" nil nil)))
+        (is (= chat-variants-with-none
+               (config/effective-model-variants default-config "gateway" "openai/gpt-6.1-terra" nil nil)))
+        (is (contains? (config/effective-model-variants default-config "gateway" "openai/gpt-6-luna" nil nil)
+                       "none"))
+        (is (contains? (config/effective-model-variants default-config "gateway" "openai/gpt-6.1-terra" nil nil)
+                       "none"))
         (is (= {"none" {:reasoning_effort "none"}
                 "low" {:reasoning_effort "low"}
                 "medium" {:reasoning_effort "medium"}
@@ -1133,6 +1172,8 @@
                 "high" {:reasoning_effort "high"}
                 "xhigh" {:reasoning_effort "xhigh"}}
                (config/effective-model-variants default-config "gateway" "gpt-5.5" nil nil)))
+        (is (nil? (config/effective-model-variants default-config "gateway" "gpt-6-sol" nil nil)))
+        (is (nil? (config/effective-model-variants default-config "gateway" "gpt-60" nil nil)))
         ;; the Responses shape stays on openai-responses providers, including the legacy `openai` api alias
         (is (= {:effort "medium" :summary "auto"}
                (get-in (config/effective-model-variants default-config "legacy" "gpt-5.5" nil nil)
