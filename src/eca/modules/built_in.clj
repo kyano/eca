@@ -28,6 +28,7 @@
    [eca.modules.providers.bedrock :as m.bedrock]
    [eca.modules.providers.copilot :as m.copilot]
    [eca.modules.providers.deepseek :as m.deepseek]
+   [eca.modules.providers.gemini :as m.gemini]
    [eca.modules.providers.google :as m.google]
    [eca.modules.providers.litellm :as m.litellm]
    [eca.modules.providers.lmstudio :as m.lmstudio]
@@ -97,6 +98,7 @@
    ;; APIs, each in its provider's namespace
    m.anthropic/api-module
    m.bedrock/api-module
+   m.gemini/api-module
    m.ollama/api-module
    m.openai/api-module
    m.openai-chat/api-module
@@ -107,6 +109,7 @@
    m.bedrock/module
    m.copilot/module
    m.deepseek/module
+   m.gemini/module
    m.google/module
    m.litellm/module
    m.lmstudio/module

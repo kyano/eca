@@ -199,16 +199,55 @@
   (is (nil? (shared/tokens-per-second nil 1000))))
 
 (deftest usage-msg->usage-test
-  (let [db* (atom {:chats {"c1" {:usage {}}}})
-        chat-ctx {:chat-id "c1" :db* db*}]
-    (shared/usage-msg->usage {:input-tokens 10 :output-tokens 20 :message-output-tps 42}
-                             "anthropic/claude"
-                             chat-ctx)
-    (is (= 42 (get-in @db* [:chats "c1" :usage :last-output-tps])))
-    (shared/usage-msg->usage {:input-tokens 10 :output-tokens 20}
-                             "anthropic/claude"
-                             chat-ctx)
-    (is (nil? (get-in @db* [:chats "c1" :usage :last-output-tps])))))
+  (let [chat-id "chat-1"
+        full-model "model-1"
+        db* (atom {})
+        chat-ctx {:chat-id chat-id :db* db*}]
+    (testing "first usage message with cache tokens sets session-tokens"
+      (let [usage (shared/usage-msg->usage
+                   {:input-tokens 100
+                    :output-tokens 20
+                    :input-cache-read-tokens 500}
+                   full-model
+                   chat-ctx)]
+        (is (= 620 (:session-tokens usage)))
+        (is (= 500 (get-in @db* [:chats chat-id :usage :last-input-cache-read-tokens])))
+        (is (= 0 (get-in @db* [:chats chat-id :usage :last-input-cache-creation-tokens])))))
+    (testing "subsequent message without cache tokens resets last-input-cache-read-tokens and recalculates session-tokens"
+      (let [usage (shared/usage-msg->usage
+                   {:input-tokens 200
+                    :output-tokens 30}
+                   full-model
+                   chat-ctx)]
+        (is (= 0 (get-in @db* [:chats chat-id :usage :last-input-cache-read-tokens])))
+        (is (= 0 (get-in @db* [:chats chat-id :usage :last-input-cache-creation-tokens])))
+        (is (= 230 (:session-tokens usage)))
+        (is (= 300 (get-in @db* [:chats chat-id :usage :total-input-tokens])))
+        (is (= 50 (get-in @db* [:chats chat-id :usage :total-output-tokens])))
+        (is (= 500 (get-in @db* [:chats chat-id :usage :total-input-cache-read-tokens])))))
+    (testing "zero-token update returns nil and does not change db*"
+      (let [db-before @db*
+            usage (shared/usage-msg->usage
+                   {:input-tokens 0
+                    :output-tokens 0}
+                   full-model
+                   chat-ctx)]
+        (is (nil? usage))
+        (is (= db-before @db*))))
+    (testing "associates message-output-tps in db and clears it when absent"
+      (shared/usage-msg->usage
+       {:input-tokens 10
+        :output-tokens 20
+        :message-output-tps 42}
+       full-model
+       chat-ctx)
+      (is (= 42 (get-in @db* [:chats chat-id :usage :last-output-tps])))
+      (shared/usage-msg->usage
+       {:input-tokens 10
+        :output-tokens 20}
+       full-model
+       chat-ctx)
+      (is (nil? (get-in @db* [:chats chat-id :usage :last-output-tps]))))))
 
 (deftest deep-merge-test
   (testing "second map as nil returns first map"

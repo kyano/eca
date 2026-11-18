@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Add native Google Gemini API provider (`api: "gemini"`) with streaming and non-streaming support, tools, Google search grounding, image input, and thinking support.
+
 ## 0.173.1
 
 - `baseConfigs` entries can be a file in a git repo, `{"git", "path", "ref"}`, fetched with the machine's git credentials (e.g. SSH keys), so no token is needed.
