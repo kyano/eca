@@ -606,6 +606,48 @@
     (testing "Mistral models on gateways keep the default reasoning_content replay"
       (is (nil? (:dialect (prompt-with "openrouter" "mistralai/mistral-large-4")))))))
 
+(deftest extra-payload-considering-variant-test
+  (testing "falls back to defaultVariant payload when variant is nil"
+    (let [model-config {:defaultVariant "high"
+                        :variants {"low" {:effort "low"}
+                                   "high" {:effort "high"}}}
+          payload (#'llm-api/extra-payload-considering-variant model-config nil {:api :anthropic} true)]
+      (is (= {:effort "high"} payload))))
+
+  (testing "falls back to kebab-case :default-variant when variant is nil"
+    (let [model-config {:default-variant "low"
+                        :variants {"low" {:effort "low"}
+                                   "high" {:effort "high"}}}
+          payload (#'llm-api/extra-payload-considering-variant model-config nil {:api :anthropic} true)]
+      (is (= {:effort "low"} payload))))
+
+  (testing "explicit variant overrides model's defaultVariant"
+    (let [model-config {:defaultVariant "low"
+                        :variants {"low" {:effort "low"}
+                                   "high" {:effort "high"}}}
+          payload (#'llm-api/extra-payload-considering-variant model-config "high" {:api :anthropic} true)]
+      (is (= {:effort "high"} payload))))
+
+  (testing "falls back to \"default\" variant when defaultVariant is not set"
+    (let [model-config {:variants {"default" {:effort "medium"}
+                                   "high" {:effort "high"}}}
+          payload (#'llm-api/extra-payload-considering-variant model-config nil {:api :anthropic} true)]
+      (is (= {:effort "medium"} payload))))
+
+  (testing "returns extraPayload alone when variant is nil and defaultVariant does not exist in variants"
+    (let [model-config {:extraPayload {:temp 0.7}
+                        :defaultVariant "unknown"
+                        :variants {"low" {:effort "low"}}}
+          payload (#'llm-api/extra-payload-considering-variant model-config nil {:api :anthropic} true)]
+      (is (= {:temp 0.7} payload))))
+
+  (testing "strips top-level :thinkingConfig and :thinking_config when reasoning-keys are present and reason? is false"
+    (let [model-config {:extraPayload {:thinkingConfig {:thinkingLevel "LOW"}
+                                       :thinking_config {:include_thoughts true}
+                                       :generationConfig {:temperature 0.4}}}
+          payload (#'llm-api/extra-payload-considering-variant model-config nil {:reasoning-keys [:thinkingConfig :thinking_config]} false)]
+      (is (= {:generationConfig {:temperature 0.4}} payload)))))
+
 (deftest prompt-passes-image-generation-to-openai-handler-test
   (testing "openai branch forwards :image-generation true to create-response! when capability is on"
     (let [captured* (atom nil)]
