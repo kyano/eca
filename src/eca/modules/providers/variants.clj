@@ -25,9 +25,9 @@
    "max" {:reasoning {:effort "max" :summary "auto"}}})
 
 (def ^:private openai-gpt-6-variants
-  "Variants for gpt-6 models (gpt-6-astra) and gpt-6.2 ones (gpt-6.2-astra,
-   gpt-6.2-sol). Same as `openai-gpt-5-6-variants` minus \"none\": OpenAI
-   documents that GPT-6 Astra and both GPT-6.2 models reject the none
+  "Variants for gpt-6 models rejecting \"none\" (gpt-6-astra, gpt-6.1-sol)
+   and gpt-6.2 ones (gpt-6.2-astra, gpt-6.2-sol). Same as `openai-gpt-5-6-variants`
+   minus \"none\": OpenAI documents that these models reject the none
    reasoning effort. Codex also lists \"ultra\" but downgrades it to \"max\" on
    the wire."
   {"low" {:reasoning {:effort "low" :summary "auto"}}
@@ -117,10 +117,14 @@
    ".*gpt[-._]5[-._]6(?!\\d)" {:variants openai-gpt-5-6-variants
                                :api openai-responses-apis
                                :excludeProviders ["github-copilot"]}
-   ;; gpt-6 family (gpt-6-astra), not gpt-6.x point releases.
-   ".*gpt[-._]6(?![-._]?\\d)" {:variants openai-gpt-6-variants
-                               :api openai-responses-apis
-                               :excludeProviders ["github-copilot"]}
+   ;; GPT-6 models with "none": gpt-6-luna, gpt-6.1-terra
+   "gpt[-._](?:6[-._]luna|6[-._]1[-._]terra)" {:variants openai-gpt-5-6-variants
+                                               :api openai-responses-apis
+                                               :excludeProviders ["github-copilot"]}
+   ;; GPT-6 models without "none": gpt-6-astra, gpt-6.1-sol
+   "gpt[-._](?:6[-._]astra|6[-._]1[-._]sol)" {:variants openai-gpt-6-variants
+                                              :api openai-responses-apis
+                                              :excludeProviders ["github-copilot"]}
    ;; gpt-6.2 (gpt-6.2-astra, gpt-6.2-sol): gpt-6's efforts, also without none.
    ".*gpt[-._]6[-._]2(?!\\d)" {:variants openai-gpt-6-variants
                                :api openai-responses-apis
@@ -142,9 +146,12 @@
    "(?:.*gpt[-._]5[-._]6(?!\\d))" {:variants openai-chat-gpt-5-6-variants
                                    :api "openai-chat"
                                    :excludeProviders ["github-copilot"]}
-   "(?:.*gpt[-._]6(?![-._]?\\d))" {:variants openai-chat-gpt-6-variants
-                                   :api "openai-chat"
-                                   :excludeProviders ["github-copilot"]}
+   "(?:gpt[-._](?:6[-._]luna|6[-._]1[-._]terra))" {:variants openai-chat-gpt-5-6-variants
+                                                   :api "openai-chat"
+                                                   :excludeProviders ["github-copilot"]}
+   "(?:gpt[-._](?:6[-._]astra|6[-._]1[-._]sol))" {:variants openai-chat-gpt-6-variants
+                                                  :api "openai-chat"
+                                                  :excludeProviders ["github-copilot"]}
    "(?:.*gpt[-._]6[-._]2(?!\\d))" {:variants openai-chat-gpt-6-variants
                                    :api "openai-chat"
                                    :excludeProviders ["github-copilot"]}
